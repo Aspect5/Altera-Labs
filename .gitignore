@@ -24,3 +24,6 @@ altera.code-workspace
 .env
 .env.*
 !/.env.example
+
+# Ignore the entire Lean project folder
+altera-backend/lean_verifier/
