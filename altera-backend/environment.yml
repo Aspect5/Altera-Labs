@@ -1,0 +1,23 @@
+# environment.yml for the Altera Labs backend
+
+name: altera-labs
+
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+  # Core Python version
+  - python=3.11
+
+  # Web server dependencies from Conda
+  - flask
+  - flask-cors
+  - python-dotenv
+  - requests
+  - pip
+
+  # Dependencies to install with Pip
+  - pip:
+    # Used in a legacy endpoint, but good to have for now to prevent import errors.
+    - PyMuPDF
