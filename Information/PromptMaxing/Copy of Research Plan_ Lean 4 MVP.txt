@@ -1,0 +1,516 @@
+﻿From Survey to Strategy: A State-of-the-Art Analysis of Natural Language/LaTeX to Lean 4 Conversion for an Interactive Socratic Tutoring System
+
+
+
+
+Executive Summary
+
+
+This report presents an exhaustive analysis of the current landscape for converting informal mathematical reasoning, expressed in natural language and LaTeX, into the formal language of the Lean 4 proof assistant. The central objective of this research is to define a feasible and pedagogically sound strategy for developing a Minimum Viable Product (MVP) of an interactive Socratic tutoring system. The entire analysis is conducted through the lens of the "Socratic Auditor Filter," a stringent set of criteria prioritizing diagnostic granularity, logical verifiability, and pedagogical value over mere translation accuracy.
+The fundamental challenge lies in bridging the vast semantic chasm between ambiguous, context-dependent human mathematical language and the rigid, unambiguous structure of formal proof systems like Lean 4. Our investigation reveals that simplistic, end-to-end "black box" translation models, while capable of generating solutions, are fundamentally unsuited for a Socratic tutor. They suffer from an inability to provide granular feedback and are susceptible to "false positives"—producing correct answers from flawed reasoning—a critical failure for any pedagogical tool.
+The most promising architectural approach involves a multi-stage pipeline centered on an Intermediate Representation (IR). Specifically, we recommend an architecture that leverages Lean 4's own metaprogramming capabilities by targeting its Syntax and Expr objects. This approach transforms the Lean 4 compiler from a simple verifier into a powerful diagnostic engine, allowing the system to capture precise, verifiable errors in a student's reasoning and translate them into pedagogical feedback.
+A comparative analysis of existing methodologies identifies the Process-Driven Autoformalization (PDA) framework as the most philosophically aligned with our Socratic mission, due to its innovative use of a compiler feedback loop and a Process-Supervised Verifier (PSV) to pinpoint error locations. While existing tools like LeanAide offer valuable prototypes, their error-handling mechanisms are not yet sufficient for a tutoring context.
+The foundational resources for such a project, including open-source models like Llemma and datasets such as Proof-Pile-2, FormL4, and Lean-Workbook, are maturing rapidly. Llemma, a language model pretrained on a vast corpus of mathematical text and code, stands out as the most viable open-source foundation for this endeavor. However, the licensing of these resources, particularly the composite Proof-Pile-2 dataset, requires careful legal review before commercial use.
+Based on this comprehensive analysis, this report rejects a simple fine-tuning strategy and a high-cost, from-scratch development effort. Instead, it recommends a Hybrid "Socratic Auditor" Strategy for the MVP. This strategy pragmatically combines the power of a fine-tuned Llemma model for initial translation with a custom-built "Auditor" module that leverages the Lean 4 compiler for rigorous, step-by-step verification and diagnostic feedback generation. A detailed, three-phase roadmap is presented, outlining the features, technologies, and—most importantly—the Socratic metrics necessary to guide the development of a truly effective and pedagogically aligned interactive tutoring system.
+
+
+Part I: The Semantic Chasm: From Informal Mathematics to Formal Proof
+
+
+This foundational section establishes the core problem domain. It moves beyond a simple statement of the problem to a detailed deconstruction of why translating human mathematical expression is a "wicked problem," setting the theoretical groundwork for the technical and pedagogical solutions analyzed later.
+
+
+1.1 The Nature of Informal Mathematical Discourse
+
+
+Human mathematical communication, whether in natural language (NL) or typeset in LaTeX, is a rich, nuanced, and highly efficient medium for conveying ideas between experts. This efficiency, however, is achieved at the cost of formal precision, creating a significant challenge for machine interpretation. The discourse is characterized by ambiguity, reliance on implicit context, and community-specific notational conventions.
+A primary challenge is the inherent ambiguity of natural language. A single phrase can map to multiple, distinct logical formulations, requiring context to disambiguate. For instance, the sentence "Sam hates flying planes" could mean that Sam dislikes the act of piloting an aircraft or that he has an aversion to airborne planes in general.1 In a formal system, these two interpretations,
+∀x((Px & Fsx) → Hsx) versus ∀x((Px & Fx) → Hsx), are completely distinct and must be resolved.1 This ambiguity extends to common mathematical notation, which often appears precise but relies on convention. The expression
+6/2x3 is a frequent source of debate, with interpretations yielding 1 or 9 depending on the assumed precedence of multiplication and division.2 Similarly, the juxtaposition of symbols can mean multiplication, as in
+$2a$, or place value, as in 43, a notational inconsistency that can confuse students.3
+Furthermore, human mathematical reasoning is profoundly enthymematic, meaning it omits steps that are considered "obvious" to the intended audience. A natural language proof of the Arithmetic Mean-Geometric Mean (AM-GM) inequality explicitly details every algebraic manipulation: expanding $(a-b)^2$, adding $2ab$ to both sides, and dividing by 2.4 In contrast, a corresponding Lean 4 proof compresses this entire sequence of algebraic reasoning into a single call to a powerful tactic like
+nlinarith.4 The formal proof leverages the vast, pre-existing, and verified knowledge codified in the
+mathlib4 library, a comprehensive universe of formalized mathematics that any autoformalization system must be aware of.5 The system cannot operate in a vacuum; it must understand the context provided by this library.
+LaTeX, while more structured than pure NL, introduces its own set of challenges. It is a semi-formal language where meaning is often derived from convention rather than strict parsing rules. For example, physicists and mathematicians will routinely write $f / 2 \pi$ and universally interpret it as $f / (2 \pi)$, despite the standard order of operations suggesting otherwise.2 A system parsing LaTeX must therefore understand these community conventions to correctly capture the author's intent. The process of formalizing a human-readable proof often involves a manual restructuring step, as demonstrated by experts like Terry Tao, who rewrites prose into a "chain of inequalities" to facilitate translation into Lean.7 This highlights that the task is not merely parsing, but logical reconstruction.
+This gap between informal and formal expression is not just a technical hurdle but also a pedagogical one. The theory of Realistic Mathematics Education (RME) posits that learning occurs through a process of "progressive formalization," where students are guided from their informal, intuitive strategies toward more formal, standard methods.8 An effective pedagogical approach does not demand immediate formal perfection. Instead, it might start with a perplexing real-world problem, like modeling the height of a rider on a Ferris wheel, to motivate the need for the formal structure of sine and cosine functions.9 A Socratic tutoring system should emulate this process, acting as a bridge that guides the user across the semantic chasm, rather than a catapult that simply launches them to the other side.
+
+
+1.2 The World of Formal Proof: Lean 4 as a Target
+
+
+In stark contrast to the flexibility of informal discourse, the Lean 4 proof assistant operates in a world of absolute logical and syntactic precision. This rigidity is the source of its power: the ability to provide machine-checked guarantees of correctness.
+At its core, Lean 4 is a functional programming language and an interactive theorem prover built on a dependent type theory. Every expression in Lean has a type, and the system's kernel, its trusted core, verifies that all definitions and proofs adhere to a small set of logical rules. This foundation is rooted in the Curry-Howard correspondence, which establishes a profound link between logic and computation: propositions are types, and proofs are programs (or terms) that inhabit those types.6 When a user successfully constructs a term of a given proposition's type, they have produced a machine-verifiable proof of that proposition.
+Lean 4 proofs can be constructed in two primary modes: term mode and tactic mode.10 In term mode, the user writes the proof term directly, explicitly constructing the object that proves the theorem. In tactic mode, initiated by the keyword
+by, the user provides a sequence of procedural commands, or tactics, that instruct Lean on how to construct the proof term.10 This distinction is critical for an autoformalization system, as it could be designed to generate either the declarative proof term or the procedural tactic script. Understanding this duality is key to both generating and interpreting Lean code.
+The Lean ecosystem is anchored by mathlib4, a massive, unified library of formalized mathematics.5 It contains tens of thousands of definitions and theorems across a wide range of mathematical fields, all interconnected and mutually consistent. Any effective autoformalization system must be "aware" of
+mathlib4 to avoid re-proving established facts and to generate code that is idiomatic and compatible with the existing library. The rapid evolution of Lean 4 and mathlib4 presents a significant challenge, as it requires systems to keep pace with new syntax, tactics, and library structures.4
+
+
+1.3 Defining the Socratic Auditor Filter
+
+
+To ensure the proposed system functions as an effective pedagogical tool and not merely a translation utility, all technical and strategic decisions must be evaluated against the "Socratic Auditor Filter." This filter is defined by three core principles derived from the project's central goal of creating an interactive Socratic tutor.
+1. Granularity: The system must be able to pinpoint the precise location and nature of an error within the user's informal reasoning. It is insufficient to state that a proof is "wrong." The system must provide feedback at the level of individual logical steps, such as, "This claim does not logically follow from your previous statement," or "The definition of 'group' you've provided is missing the associativity axiom." This requires the system to maintain a clear mapping between the user's informal input and the generated formal code.
+2. Verifiability: The logical soundness of every reasoning step must be auditable and guaranteed. The system must be immune to the "false positive" problem, where a correct final answer is derived from a fallacious or incorrect reasoning path. This is a known failure mode of purely probabilistic models that lack a formal verification component.13 For a Socratic tutor, teaching a student an incorrect method to reach a correct answer is a catastrophic failure. Therefore, every intermediate step of a proof generated or validated by the system must be rigorously checked by the Lean 4 kernel.
+3. Pedagogical Feedback: The system must be able to translate low-level, cryptic compiler errors into high-level, conceptual, and actionable feedback for the student. An error message like type mismatch is unhelpful to a novice. The system must transform it into a Socratic prompt, such as, "It looks like you're trying to add a number and a set. These are different kinds of mathematical objects. Can you clarify what you mean here?" This principle ensures the system functions as a tutor, guiding understanding rather than just reporting errors.
+The application of this filter has profound architectural implications. It suggests that a successful system cannot be a monolithic black box. Instead, it must be a transparent, multi-stage process that leverages the formal verification power of the Lean 4 compiler as its core diagnostic engine. The ultimate measure of the system's success is not its ability to solve problems, but its ability to help a human solve problems correctly.
+
+
+Part II: Deconstructing the Translation Challenge: From Ambiguity to Axioms
+
+
+This section analyzes the specific technical pathways for converting natural language and LaTeX into a structured, pre-formal representation. The analysis, conducted through the Socratic Auditor Filter, reveals that the task is not one of direct translation but of "structured reconstruction," necessitating an intermediate representation to bridge the gap between informal human expression and formal machine logic.
+
+
+2.1 The Natural Language Pathway
+
+
+The conversion of natural language mathematics into a formal representation has evolved from early grammar-based methods, which struggled with the complexity and ambiguity of real-world language, to modern approaches dominated by Large Language Models (LLMs).14 A particularly insightful architecture is the LLM-chaining pipeline, which deconstructs the problem into a sequence of manageable steps, making the process more transparent and diagnosable.
+One such approach, exemplified by the Logic-LangChain system for detecting logical fallacies, follows a clear, multi-step process for converting NL to First-Order Logic (FOL).14
+1. Claim and Implication Splitting: The initial step is to decompose the input sentence into its constituent logical parts: the premises (claims) and the conclusion (implication). For example, in "I met a tall man who loved to eat cheese, now I believe all tall people like cheese," the claim is "A tall man loved to eat cheese," and the implication is "All tall people like cheese".14 This initial separation of what is given from what is being asserted is a fundamental first step in logical analysis.
+2. Entity and Property Extraction: The system then identifies the key nouns as "referring expressions" (e.g., man, cheese, people) and the descriptive phrases as "properties" or predicates (e.g., Tall(x), Love(x, c)). This step effectively creates a vocabulary of objects and relations from the text.
+3. Relationship Identification: A crucial step for capturing implicit context is the identification of relationships between these extracted components. This can be achieved using Natural Language Inference (NLI) models. For instance, an NLI model can infer that "man" is a subset of "people" or that "loving cheese" implies "liking cheese." This process explicitly constructs a "ground truth" or context that the LLM uses for its reasoning, making its assumptions transparent.14
+4. FOL Formulation: Finally, these structured components—entities, properties, and relationships—are assembled into a formal First-Order Logic formula. The validity of this formula can then be checked by an external solver.14
+When evaluated through the Socratic Auditor Filter, this structured pathway shows significant promise. Its primary strength is its inherent granularity. Each stage of the pipeline—claim splitting, entity extraction, relationship inference—is a potential point for diagnostic feedback. If the system misidentifies an entity or infers an incorrect relationship, this can be flagged and presented to the user. This transparency is a stark contrast to an opaque, end-to-end model. However, this approach is not without its weaknesses. The most significant is that FOL is not Lean 4. There remains a substantial semantic gap between the expressive power of First-Order Logic and Lean's rich dependent type theory, which includes concepts like typeclasses, higher-order logic, and universes that have no direct analogue in FOL. Furthermore, the reliance on an NLI model to infer ground truth introduces its own "black box" element that must be carefully managed to ensure the reliability of the generated context.
+
+
+2.2 The LaTeX Pathway
+
+
+Translating mathematical content from LaTeX presents a different, though related, set of challenges. The task goes far beyond simple syntax highlighting, as seen in text editors or Lyx listings.15 It requires a deep parsing of the logical structure embedded within the presentational markup.
+The process of manually formalizing LaTeX-based proofs provides critical clues for automation. Mathematicians often begin by rewriting a human-readable proof into a more structured format, such as a "chain of inequalities," before translating it into Lean.7 This intermediate step makes the logical flow explicit and easier to formalize. An automated system must replicate this process of identifying and structuring the core logical steps hidden within the prose and equations.
+The translation is further complicated by significant syntactic and idiomatic differences between the two languages. For example:
+* Function application in LaTeX is typically written with parentheses, like $D(k)$, whereas in Lean it is simple juxtaposition, D k.7
+* Proof blocks in Lean 3 used begin...end, while Lean 4 predominantly uses the by keyword to enter tactic mode.10
+* Quantifiers that are often implicit in LaTeX (e.g., "for all k") must be made explicit in Lean (e.g., ∀ k : ℕ,...).7
+An autoformalization system must be aware of these and many other subtle distinctions.
+Applying the Socratic Auditor Filter to the LaTeX pathway reveals its own strengths and weaknesses. On the one hand, LaTeX is inherently more structured than pure natural language, which can make the parsing of mathematical expressions more reliable. On the other hand, the translation is highly non-trivial. A simple system based on regular expressions or direct symbol replacement would fail catastrophically. The system must comprehend the mathematical intent behind the LaTeX, not just its visual representation. For a Socratic tutor, this is paramount. An error in the user's input could be a simple LaTeX typo, a misunderstanding of notational conventions, or a profound logical flaw. A successful Socratic Auditor must be able to differentiate between these error classes to provide appropriate feedback.
+The analysis of both the NL and LaTeX pathways leads to a crucial conclusion: the core of a successful system should not be a monolithic "translator" but a pipeline that first deconstructs the informal input into a structured representation of its entities, properties, and logical steps. This structured reconstruction is a prerequisite for generating correct and idiomatic Lean code. This realization solidifies the architectural necessity of an Intermediate Representation (IR), which becomes the most critical design decision for the entire system. The IR must be rich enough to capture the user's intent and structured enough to enable the granular, verifiable feedback demanded by the Socratic Auditor Filter.
+
+
+Part III: Architectural Blueprints for Formalization: The Role of Intermediate Representations (IRs)
+
+
+This section evaluates potential system architectures for the autoformalization task, arguing that an architecture centered on a well-chosen Intermediate Representation (IR) is not merely beneficial but essential for meeting the stringent requirements of the Socratic Auditor Filter. The choice of IR is the single most critical architectural decision, dictating the system's diagnostic power and pedagogical potential.
+
+
+3.1 The "Black Box" Approach: Direct End-to-End Translation
+
+
+The most straightforward architecture, conceptually, is a direct, end-to-end translation model. In this setup, a single large language model is trained to take informal NL or LaTeX as input and produce a string of Lean 4 code as its final output. This approach is analogous to how general-purpose models like GPT-4 are often prompted for code generation tasks.
+However, when evaluated against the Socratic Auditor Filter, this architecture exhibits fundamental and disqualifying flaws.
+* Lack of Granularity: The translation process is entirely encapsulated within the model's opaque neural network. If the generated Lean code contains an error, it is impossible to reliably trace that error back to a specific flaw in the user's informal reasoning. The system can only report failure at the whole-proof level, offering no insight into why the proof failed.
+* The "False Positive" Catastrophe: This architecture is highly susceptible to producing correct answers through invalid reasoning. Models like Google's Minerva, which operate on informal step-by-step reasoning without a formal verification layer, exemplify this danger.13 Minerva can generate solutions that arrive at the correct final number but contain significant calculation or reasoning mistakes in the intermediate steps.13 For a tutoring system, this is a catastrophic failure. Teaching a student an incorrect method that happens to yield a correct result is actively harmful and undermines the entire pedagogical mission.
+* Inherent Opaqueness: Without a structured, verifiable intermediate step, the model's reasoning is inaccessible. It is impossible to generate the kind of diagnostic feedback required by a Socratic tutor beyond a simple "correct" or "incorrect" judgment.
+For these reasons, the direct end-to-end translation approach must be rejected. Its lack of verifiability and diagnostic granularity makes it fundamentally incompatible with the project's core objectives.
+
+
+3.2 The Case for Intermediate Representations (IRs)
+
+
+A superior architecture employs a two-stage pipeline built around an Intermediate Representation. The process is bifurcated: first, the informal input is translated into the structured IR (Input -> IR), and second, the IR is translated into final Lean 4 code (IR -> Lean 4). This decomposition provides a critical checkpoint for verification and feedback. Several candidate IRs exist, each with distinct trade-offs.
+* First-Order Logic (FOL): Used by systems like Logic-LangChain to represent the logical structure of natural language arguments.14
+   * Pros: FOL is a well-understood formal language, making it excellent for capturing basic predicate-argument structures and logical connectives.
+   * Cons: Its expressive power is severely limited compared to Lean's dependent type theory. FOL cannot natively represent higher-order concepts, type classes, inductive types, or the universe hierarchies that are central to Lean. The semantic gap between FOL and Lean 4 remains vast, requiring a second complex and error-prone translation step.
+* Proof Graphs / Dependency Graphs: This IR represents a proof as a directed acyclic graph where nodes are definitions or lemmas and edges represent dependencies. This structure is visible in the analysis of automatically generated proofs 18 and is a core feature of tools like the Lean Blueprint, which provides a top-down view of formalization progress.6
+   * Pros: This representation is excellent for visualizing the high-level strategy of a proof and identifying "pivotal lemmas" or key dependencies. This aligns well with Socratic feedback on proof planning and structure.
+   * Cons: It may lack the fine-grained detail needed to represent individual tactic applications or term-level manipulations within a single proof step. It is more of a macro-structural representation than a micro-structural one.
+* Natural Language as an IR (NLIR): This approach, used by the Pétanque system for the Coq proof assistant, involves having the LLM generate a natural language plan or chain-of-thought explanation of the proof strategy. This NL plan is then used to guide the generation of formal proof tactics.19
+   * Pros: The NLIR is highly interpretable to humans and aligns with how mathematicians naturally reason about proofs. It allows for powerful search and reranking techniques based on the coherence of the NL plan.
+   * Cons: The NL plan itself is not formally verifiable. This approach pushes the ambiguity problem one level deeper rather than solving it. While it is a powerful scaffolding technique, it does not provide the rigorous verifiability required by the Socratic Auditor at the IR stage.
+* Custom Abstract Syntax Trees (ASTs): This involves defining a custom data structure, often as an inductive type in a language like Lean itself, to represent the structure of the mathematical input. For example, one could define an Arith type with constructors for addition, multiplication, variables, and constants to represent arithmetic expressions.21
+   * Pros: This approach offers complete control over the IR's structure, allowing it to be tailored precisely to the problem domain and the target language (Lean 4).
+   * Cons: It requires significant upfront design effort and can become unwieldy and complex if the domain is broad.
+
+
+3.3 The Ultimate IR: Leveraging Lean 4 Metaprogramming
+
+
+The most powerful and promising architectural choice is to leverage Lean 4's own internal representations as the target IR. The Lean 4 compiler itself operates on a multi-stage pipeline, transforming code from a raw string into a fully verified term that can be accepted by the kernel.21 The two key objects in this process are
+Syntax and Expr.
+* Syntax: This is a concrete syntax tree (CST), often referred to as an abstract syntax tree (AST), that represents the code after it has been parsed. A Syntax object captures the structure of the code, including all notations, identifiers, and keywords. Crucially, at this stage, the code has not been type-checked or fully interpreted. It is a structured representation of what the user wrote.
+* Expr: After the Syntax object is created, it undergoes a process called "elaboration." Elaboration is the phase where Lean infers types, resolves overloaded notation, inserts implicit arguments, and ultimately produces a fully-typed, unambiguous Expr (expression) object. It is this Expr that is passed to the Lean kernel for final verification.
+The optimal architecture for the Socratic tutor is one that translates the user's informal input not into a raw string of Lean code, but directly into a Lean Syntax object. This choice enables a powerful, two-phase verification process that is perfectly aligned with the Socratic Auditor Filter.
+1. Phase 1: Structural/Syntactic Verification: The system first attempts to generate a Syntax object. This object can be checked for basic structural validity against Lean's grammar before any deep semantic analysis occurs.
+2. Phase 2: Semantic/Logical Verification: The generated Syntax object is then passed to the Lean elaborator. The elaborator attempts to convert it into a well-typed Expr. This is the crucible where the full logical and type-theoretic power of Lean is brought to bear.
+Any failure during the elaboration phase generates a precise, structured error message from the compiler. These errors—ranging from type mismatches to failures in tactic application—are the raw material for high-quality Socratic feedback. This architecture separates the problem of "generating code that looks right" (parsing into Syntax) from the much harder problem of "generating code that is logically correct" (elaborating into Expr). The feedback from the failure of the second step is exactly the diagnostic information the tutor needs.
+This approach mandates that the development team possess expertise not just in LLMs but in the intricacies of Lean 4 metaprogramming.11 The problem transforms from a pure natural language processing task into a compiler and formal methods integration task, a more complex but ultimately more powerful and pedagogically sound direction.
+
+
+Part IV: The Autoformalization Engine: A Comparative Analysis of State-of-the-Art Methodologies
+
+
+This section provides a head-to-head comparison of the most relevant existing systems for NL-to-Lean 4 autoformalization. Each framework is evaluated against the architectural principles established in Part III and the stringent criteria of the Socratic Auditor Filter to determine its suitability for the proposed tutoring system.
+
+
+4.1 Process-Driven Autoformalization (PDA) and the Process-Supervised Verifier (PSV)
+
+
+The Process-Driven Autoformalization (PDA) framework represents a significant conceptual advance in autoformalization, particularly for a rapidly evolving language like Lean 4.4 Its core philosophy is uniquely aligned with the needs of a Socratic tutor.
+* Core Mechanism: PDA is designed as an iterative improvement cycle between an autoformalization model (which generates Lean code) and a verification model. The key innovation is its use of the Lean 4 compiler's output not just as a binary pass/fail signal, but as a rich, process-level supervisory signal.4 The framework is trained and evaluated on the FORML4 dataset, which crucially includes not just theorem statements but also their corresponding proof steps, enabling this deep level of analysis.4
+* The Process-Supervised Verifier (PSV): The PSV is the heart of the PDA framework's diagnostic capability. It is trained to predict the correctness of generated code by learning from the detailed feedback of the Lean compiler. Its most important feature is the "first error location" labeling mechanism.38 When a generated proof script is fed to the compiler, the PSV labels all tactic steps leading up to the
+first compilation error as correct, and the rest as incorrect. This provides an extremely granular, step-level feedback signal that can be used to fine-tune the autoformalizer, teaching it to avoid specific types of mistakes.
+* Socratic Auditor Analysis: PDA is the leading candidate framework in terms of architectural philosophy. Its entire design is predicated on extracting and utilizing granular diagnostic information from a formal verifier. The PSV's ability to pinpoint the first point of failure in a chain of reasoning is a direct and powerful implementation of the Socratic Auditor's granularity requirement. The iterative cycle, where the autoformalizer and verifier mutually improve, serves as an excellent model for the long-term interaction between a student and the tutoring system.38
+* Inferred Failure Modes: While the source documents do not extensively detail the failure modes of PDA 4, they can be inferred. The quality of the feedback loop is entirely dependent on the quality of the Lean compiler's error messages. If the compiler produces a generic or misleading error, the supervisory signal for the PSV will be weak. Furthermore, the approach's effectiveness hinges on the availability of high-quality datasets like FORML4 that contain complete proof processes, not just final statements.41
+
+
+4.2 The Herald Translator
+
+
+The Herald translator is another state-of-the-art system that focuses on creating a high-quality parallel corpus between informal and formal mathematics to train powerful autoformalization models.5
+   * Core Mechanism: Herald's primary contribution is a pipeline for translating the formal mathlib4 library into natural language, thereby creating a large dataset of formal-informal pairs. It employs a "dual augmentation strategy" that combines tactic-based and informal-based approaches, and it leverages Retrieval-Augmented Generation (RAG) techniques.5 A key feature is its sophisticated use of structured contextual information from the formal library, including dependent theorems, the kind of statement (e.g.,
+theorem, definition), docstrings, and neighboring statements, to produce more accurate and idiomatic translations.42
+   * Validation Pipeline: Herald includes a validation pipeline that uses a Read-Eval-Print Loop (REPL) based on the Lean 4 compiler to verify that its autoformalized statements are syntactically valid.42 This is a crucial step for ensuring the quality of its output.
+   * Socratic Auditor Analysis: Herald's main strength lies in its advanced methodology for data generation and its deep understanding of the structural context within mathlib4. This is essential for generating Lean code that is not just correct but also idiomatic. Its REPL-based validation is a good practice, but it appears to focus on the correctness of the final statement (often checked with a := sorry placeholder proof) rather than the step-by-step verification of the proof process itself, which is central to PDA. While its data generation techniques are state-of-the-art, its direct diagnostic feedback loop seems less developed than PDA's, and details on its error handling are sparse in the available materials.5
+
+
+4.3 LeanAide
+
+
+LeanAide is a practical, open-source tool designed to provide AI-based assistance for Lean 4 development, making it an excellent case study for a potential MVP.43
+      * Core Mechanism: LeanAide functions as a VS Code extension that translates natural language comments into Lean 4 code.45 It uses an LLM (originally Codex, now GPT models) with a RAG-like approach: given a user's NL statement, it finds similar docstrings in
+mathlib, uses them to construct a few-shot prompt, sends this to the LLM, and then post-processes the results.43
+      * Error Handling: LeanAide's error handling is pragmatic but primitive from a Socratic perspective. If a perfect translation is not found, it attempts to find one that is at least syntactically correct, even if it doesn't type-check. If all attempts fail, the documentation notes that the underlying model is "more likely to give you garbage than outright failing".45 Its most sophisticated check is to filter outputs based on whether they "elaborate" in Lean, which is the correct principle.43
+      * Technical Readiness Level (TRL): LeanAide is assessed at a TRL of 4-5. It is a working prototype with a functional server-client architecture that has been validated in a lab/relevant environment. However, it is explicitly described as "work in progress" with known limitations, such as handling complex idioms and generating definitions.43
+      * Socratic Auditor Analysis: LeanAide serves as an excellent proof-of-concept for an MVP. Its use of RAG and its integration into the developer workflow are valuable. However, its current error handling is insufficient for a Socratic tutor. A system that might "fall back to garbage" is not a reliable pedagogical tool. Its use of the elaboration check is the correct architectural choice, but it does not appear to capture and utilize the rich error information from the compiler for feedback in the systematic way that PDA does. LeanAide is a valuable component and a source of inspiration, but it is not, in its current form, a complete Socratic solution.
+
+
+Table 1: Comparative Analysis of Autoformalization Frameworks
+
+
+Framework
+	Core Mechanism
+	Diagnostic Granularity
+	Alignment with Socratic Principles
+	TRL/Maturity
+	Key Snippets
+	Process-Driven Autoformalization (PDA)
+	Iterative loop between an autoformalizer and a Process-Supervised Verifier (PSV) using detailed Lean 4 compiler feedback.
+	High. The PSV is trained to identify the "first error location" in a proof script, enabling step-level diagnostics.
+	High. The entire framework is built on extracting and using process-level feedback for improvement, which is directly analogous to a Socratic dialogue.
+	TRL 3-4. A research framework and proof of concept. Not a production-ready system.
+	4
+	Herald Translator
+	Retrieval-Augmented Generation (RAG) using a dual-augmentation strategy to create a large parallel corpus from mathlib4.
+	Medium. Validates statements for syntactic correctness using a REPL. Less emphasis on step-by-step proof process verification compared to PDA.
+	Medium. Strong on generating context-aware, idiomatic code. The validation pipeline provides a basic level of verifiability, but the deep diagnostic loop is less developed.
+	TRL 3-4. A research framework focused on data generation and translation.
+	5
+	LeanAide
+	RAG-based tool using LLMs (e.g., GPT-4) prompted with similar examples from mathlib docstrings. Integrated into VS Code.
+	Low. Error handling is primitive, with potential to "fall back to garbage." It correctly filters based on whether code "elaborates" but does not systematically use error messages for feedback.
+	Low. While a useful assistant, its lack of robust, granular feedback and its potential to produce incorrect code make it unsuitable as a Socratic tutor in its current form.
+	TRL 4-5. A working prototype/tool validated in a relevant environment, but still "work in progress."
+	43
+	
+
+Part V: The Socratic Imperative: Achieving Granular Diagnostics and Verifiable Reasoning
+
+
+This section forms the analytical core of the report. It synthesizes the findings from the preceding parts to articulate a clear, actionable vision for a system that fully embodies the principles of the Socratic Auditor Filter. This is not about adding a feature, but about defining the central design philosophy of the entire tutoring system.
+
+
+5.1 From Compiler Error to Pedagogical Insight
+
+
+The Lean 4 compiler is the ultimate source of ground truth for this project. When it rejects a piece of code, it provides a structured error message that is rich with diagnostic information. The primary challenge and opportunity for the Socratic tutor lie in translating this technical, often cryptic, output into a pedagogical dialogue.
+The raw material for feedback is the compiler's error itself. An error such as type mismatch, term 'h' has type 'p > 0' but is expected to have type 'p ≥ 0' is precise and informative to an expert Lean user. For a student learning formal methods, it is opaque. A dedicated "Error Message Interpretation" module is therefore a critical component of the proposed architecture. This module's function is to re-contextualize the technical error as a conceptual hint. For the given example, the module would generate feedback like: "That's an interesting step. You've successfully shown that p is strictly positive. The theorem, however, only requires p to be non-negative. Is your assumption stronger than what's needed, or is there another way to use this fact?"
+This transformation from a compiler diagnostic to a pedagogical prompt is the essence of the Socratic interaction. The interpretation module could be implemented using a combination of techniques: a rule-based system could handle common, easily parsable error patterns, while a smaller, fine-tuned LLM could be trained specifically on pairs of Lean compiler errors and high-quality pedagogical explanations to handle more complex or novel cases. This module is what elevates the system from a simple code checker to a genuine tutor.
+
+
+5.2 The Foundational Importance of Verifiability: Mitigating "False Positives"
+
+
+The most significant risk in using LLMs for mathematical reasoning is the "false positive" phenomenon: arriving at a correct final answer through a fallacious or logically unsound process. This was identified as a key limitation of Google's Minerva model, which, because it is not grounded in a formal mathematical structure, cannot have its intermediate reasoning steps automatically verified.13
+For a Socratic tutoring system, a false positive is not just an error; it is an existential threat to its credibility and pedagogical mission. A tutor that teaches a student an incorrect method is worse than no tutor at all. This leads to a non-negotiable architectural mandate: the Lean 4 kernel must be the ultimate arbiter of truth for every single logical step. Every tactic applied, every term constructed, and every lemma invoked must be formally verified before the system presents it as a correct step to the user.
+This principle reinforces the architectural conclusions from Part III. Any system architecture that does not culminate in a formal verification step for every piece of generated logic is fundamentally unsuitable for this project. The primary advantage of using a formal proof assistant like Lean over a purely informal LLM reasoning engine is precisely this guarantee of verifiability. The Socratic tutor must be built to leverage this advantage to its fullest extent.
+
+
+5.3 Designing for Progressive Formalization
+
+
+The interaction model of the Socratic tutor must be designed to guide the user along a path of "progressive formalization," a concept borrowed from mathematics education research.8 Learning formal mathematics is a process of "guided reinvention," where a student's informal and intuitive ideas are gradually shaped and structured into formal, rigorous arguments.8 The tutor's user interface and interaction design must facilitate this journey.
+A single-shot "translate" button is therefore the wrong model. Instead, the system should be an interactive, step-by-step proof editor. A typical user flow would be:
+         1. The student enters a theorem they wish to prove in natural language.
+         2. The system provides an initial, autoformalized Lean 4 statement of the theorem for the student's approval.
+         3. The student begins their proof by writing an informal description of the first step in their reasoning (e.g., "First, I will assume n is a natural number and h is the hypothesis that n is even.").
+         4. The system attempts to formalize this single step into a Lean tactic (e.g., intro n h).
+         5. If the formalization is successful and the tactic is valid, the system applies it, and the Lean proof state (the current goal) updates in the UI.
+         6. If the formalization or the resulting tactic is invalid, the system does not simply fail. Instead, it uses the compiler error, processed through the Error Message Interpretation module, to provide a Socratic prompt to the student, guiding them to correct their reasoning.
+This interactive, dialogical model directly implements the pedagogical principles of RME. It mirrors the process of a human tutor working with a student, starting from the student's own intuitive ideas (like using a Ferris wheel to understand periodic motion) and scaffolding their journey toward formal understanding (the graph of the sine function).9 This design ensures that the student is an active participant in the process of proof construction, using the tool not as a crutch, but as a guide for their own discovery. The Socratic Auditor Filter is thus not an afterthought, but the central design principle that shapes the architecture, core components, and user interaction model of the entire system.
+
+
+Part VI: Foundational Resources: An Audit of Models and Datasets for Lean 4 Autoformalization
+
+
+The success of an AI-driven autoformalization system depends critically on the quality and accessibility of its foundational resources: the underlying large language models and the datasets used for training and fine-tuning. This section provides a detailed audit of the most relevant resources, assessing their technical capabilities and, crucially, their legal and practical suitability for a commercial MVP.
+
+
+6.1 Model Audit: The Brains of the Operation
+
+
+The choice of the base LLM is a pivotal decision. The model must not only possess strong general language capabilities but also a deep, nuanced understanding of mathematical syntax, semantics, and reasoning.
+         * Llemma:
+         * Architecture and Training: Llemma is a family of open-source language models (7B and 34B parameters) specifically adapted for mathematics. It was created by continuing the pretraining of Code Llama on Proof-Pile-2, a 55-billion-token dataset of scientific papers, mathematical web content, and mathematical code.47 The architecture is a standard decoder-only transformer, and the training configurations, including learning rates and batch sizes, are openly documented, facilitating replication.48
+         * Performance and Capabilities: Llemma has demonstrated state-of-the-art performance for open models on benchmarks like MATH, even surpassing the proprietary Minerva model on an equi-parameter basis.47 Critically for this project, Llemma is capable of formal theorem proving in-context, without requiring task-specific fine-tuning.51 The original paper evaluates its performance on the miniF2F benchmark for both informal-to-formal and formal-to-formal (tactic generation) proving in both Isabelle and Lean 4.47 While the provided research materials do not contain the specific numerical results for Lean 4 performance 47, the existence of a public repository with the experimental code (
+llemma_formal2formal) suggests these results are reproducible.52
+         * Limitations: As a base model, Llemma's performance is highly dependent on effective prompting or further fine-tuning for specialized tasks.51 While a study in the paper found that memorization did not seem to be a major factor in its benchmark performance, this remains a concern for all large models.50
+         * Verdict: Llemma is the leading open-source candidate for the MVP's foundation. Its specific training on mathematical code (including Lean), demonstrated formal proving capabilities, and open nature make it the ideal starting point.
+            * Minerva:
+            * Architecture and Capabilities: Minerva is a proprietary model from Google, based on their PaLM architecture and further trained on a 118GB dataset of scientific and mathematical content.13 Its key feature is its ability to generate step-by-step solutions to quantitative problems using a mix of natural language and LaTeX notation.17
+            * Fatal Flaw: Minerva's reasoning is not grounded in formal mathematics. It lacks an underlying formal structure, meaning its steps cannot be automatically verified.13 This leads directly to the "false positive" problem, making it fundamentally unreliable for a Socratic tutor that requires guaranteed logical soundness.13 Furthermore, it is not open source.53
+            * Verdict: Minerva serves as a crucial cautionary tale. It demonstrates that impressive performance on quantitative reasoning benchmarks does not equate to the verifiable correctness required for this project.
+            * GPT-f:
+            * Contribution and Relevance: GPT-f was a pioneering project from OpenAI that demonstrated, for the first time, that a deep learning-based system could generate novel, human-valuable proofs that were accepted into a formal mathematics library (Metamath).55 It established the viability of using generative models for automated theorem proving. The more recent EvoGPT-f paper builds on this legacy, proposing a systematic framework for evaluating the "machine learnability" of different formal languages, including Lean 4, which could provide valuable insights in the future.57
+            * Verdict: While not a direct candidate model for the MVP, GPT-f's success provides historical validation for the entire field and the research direction of this project.
+
+
+Table 2: Foundational Model Capabilities
+
+
+Model
+	Architecture Base
+	Key Contribution
+	Formal Proving Capability
+	Verifiability / Socratic Alignment
+	Open Source & Licensing
+	Key Snippets
+	Llemma
+	Code Llama (Decoder-only Transformer)
+	SOTA open model for math, pretrained on mathematical text and code (Proof-Pile-2).
+	Demonstrated. Capable of in-context formal theorem proving in Lean 4 and Isabelle without fine-tuning.
+	High. As a code-generating model, its output can be directly fed to the Lean compiler for formal verification.
+	Yes. Models and training data are openly released. Based on Code Llama.
+	47
+	Minerva
+	Google PaLM
+	SOTA proprietary model for quantitative reasoning using informal step-by-step solutions.
+	None. Does not generate formal proofs. Reasons in a mix of NL and LaTeX.
+	None. Not grounded in formal mathematics. Cannot be automatically verified and is known to produce "false positives."
+	No. Proprietary Google model.
+	13
+	GPT-f
+	GPT-2/3
+	First deep learning system to contribute novel proofs to a formal math library (Metamath).
+	Demonstrated (Metamath). Proved the viability of generative models for formal proving.
+	High. Generated formal proof steps that were machine-verified by the Metamath checker.
+	No. Research project, model not released.
+	55
+	
+
+6.2 Dataset Audit: The Fuel for the Engine
+
+
+The performance of the chosen model will be heavily influenced by the data used for fine-tuning. A careful audit of available datasets is essential.
+            * Proof-Pile-2:
+            * Composition: This is the massive 55B token dataset used to train Llemma. It is a composite of three main sources: the arxiv subset of RedPajama, the open-web-math dataset, and the algebraic-stack.58 The
+algebraic-stack is of particular interest, as it contains 11B tokens of mathematical code, including a significant 285.6 million tokens of Lean code.59
+            * Licensing and Commercial Use: This is a critical risk area requiring legal review. The license for Proof-Pile-2 is a composite of its components' licenses.59 The RedPajama dataset is under the permissive Apache 2.0 license.60 However, OpenWebMath is released under ODC-By 1.0 and also requires adherence to CommonCrawl's Terms of Use, though its GitHub repository also lists Apache 2.0, creating ambiguity.62 The licenses for the
+algebraic-stack are inherited from the myriad of open-source projects from which the code was scraped. Using this dataset to train a model for a commercial product is not straightforward and requires a thorough legal audit to ensure compliance.
+               * FormL4:
+               * Composition: A benchmark dataset specifically designed for evaluating autoformalization in Lean 4. It is derived from mathlib4 and, most importantly, contains not just formal statements but their corresponding formal proof steps.4
+               * Relevance and Suitability: This is an ideal dataset for training the Socratic tutor. Its inclusion of the entire proof process enables the process-driven supervision (like in PDA) that is necessary for developing a granular diagnostic capability. The dataset is explicitly open-sourced to facilitate research.12
+               * Herald Dataset:
+               * Composition: A parallel corpus created by translating the formal mathlib4 library into natural language using a sophisticated, context-aware pipeline.5
+               * Relevance and Suitability: This dataset provides a large volume of high-quality, aligned informal-formal pairs. Its primary value is for training a model to understand the mapping between natural language and idiomatic Lean. However, since it is generated via formal-to-informal translation, it may not fully capture the diversity and "messiness" of authentic, human-generated informal mathematics.
+               * Lean-Workbook:
+               * Composition: A large-scale dataset of natural language math problems that have been formalized into Lean 4.63 Its creation involved an iterative process of LLM-based generation, automated filtering (compilation tests and back-translation with NLI), and human-in-the-loop correction.64
+               * Relevance and Suitability: This dataset is highly valuable as it consists of genuine natural language problems translated into formal statements. The iterative, human-in-the-loop creation process serves as an excellent model for how custom, high-quality data could be generated for the MVP project itself.
+
+
+Table 3: Analysis of Key Datasets for Lean 4 Autoformalization
+
+
+Dataset
+	Composition
+	Lean 4 Specificity
+	Includes Proof Steps?
+	Licensing & Commercial Use
+	Suitability for Socratic Tutor
+	Key Snippets
+	Proof-Pile-2
+	55B tokens of ArXiv papers, web math, and mathematical code.
+	Medium. Contains a 285.6M token Lean subset within its algebraic-stack.
+	Yes (in code). Contains full source files of formal proofs.
+	Complex/Ambiguous. Inherits licenses from components. Requires legal review for commercial use.
+	High (for pretraining). The foundational dataset for Llemma. Its code component is invaluable.
+	58
+	FormL4
+	NL questions, answers, formal statements, and formal proofs from mathlib4.
+	High. Specifically designed for Lean 4 autoformalization.
+	Yes. Explicitly includes proof steps for process-level supervision.
+	Openly released for research.
+	Very High. Ideal for training the diagnostic (PSV-like) component of the tutor.
+	4
+	Herald Dataset
+	Parallel corpus created by translating mathlib4 into natural language.
+	High. Directly maps mathlib4 to NL.
+	No (primarily statements). Focus is on statement formalization.
+	Unspecified. Likely depends on mathlib4's license (Apache 2.0).
+	Medium. Excellent for learning idiomatic statement formalization. Less useful for proof process diagnostics.
+	5
+	Lean-Workbook
+	NL math problems formalized into Lean 4 statements with human-in-the-loop validation.
+	High. A large collection of real NL-to-Lean 4 problem pairs.
+	No (statements only). Problems are formalized with := by sorry.
+	Unspecified.
+	High (for statement formalization). Provides excellent real-world examples for the initial translation step.
+	63
+	
+
+Part VII: Synthesis and Strategic Pathway for a Pedagogically-Aligned MVP
+
+
+This concluding section synthesizes the entire analysis into a concrete and actionable strategic plan. It begins with a feasibility assessment, evaluates distinct strategic options, and culminates in a recommended, phased roadmap for developing a Minimum Viable Product (MVP) that is both technologically advanced and pedagogically sound.
+
+
+7.1 Feasibility Assessment & TRL Summary
+
+
+An assessment of the Technical Readiness Level (TRL) of the required components indicates that while significant engineering is needed, the project is feasible and the core technologies are sufficiently mature to de-risk an MVP effort.
+               * Foundational Models (Llemma): TRL 5-6 (Technology demonstrated in relevant/operational environment). Llemma is an open, available, and proven model capable of the target task.47
+               * Autoformalization Frameworks (PDA): TRL 3-4 (Analytical & experimental critical function and/or characteristic proof-of-concept / Component and/or breadboard validation in laboratory environment). The principles of using a compiler feedback loop are sound and have been demonstrated in a research context, but a production-ready implementation does not exist.38
+               * Practical Tools (LeanAide): TRL 4-5 (Component and/or breadboard validation in laboratory/relevant environment). LeanAide is a valuable working prototype that validates the core concept of an AI-assisted formalization workflow, but it is not a production-grade system.43
+               * Lean 4 Metaprogramming: TRL 9 (Actual system "flight proven" through successful mission operations). The metaprogramming facilities of Lean 4 are a mature, core feature of the language, ready for robust implementation.21
+The overall assessment is that the foundational building blocks are available. The primary challenge is not in inventing new core technologies, but in the sophisticated engineering and research required to integrate these components into a novel, robust, and pedagogically effective product.
+
+
+7.2 Strategic Options for the MVP
+
+
+Three distinct strategic pathways present themselves for the development of the MVP.
+               1. Strategy A: The Augmentation Strategy
+               * Description: This strategy prioritizes speed. It involves taking the open-source Llemma model and fine-tuning it on a curated mixture of high-quality Lean 4 datasets like FormL4 and Lean-Workbook. The MVP would consist of a user interface that sends informal input to this fine-tuned model and displays the resulting Lean 4 code.
+               * Pros: Fastest time-to-market; leverages existing state-of-the-art open models directly.
+               * Cons: This approach risks creating an opaque "black box" that fundamentally fails the Socratic Auditor Filter. Diagnostic capabilities would be minimal, and the system would be susceptible to the "false positive" problem, making it pedagogically unsound.
+               2. Strategy B: The Framework Implementation Strategy
+               * Description: This strategy prioritizes creating deep, proprietary intellectual property. It involves building a new system from first principles, based on the architecture of Process-Driven Autoformalization (PDA). This would require developing a custom autoformalizer and a process-supervised verifier that interact via a dedicated Lean 4 compiler feedback loop.
+               * Pros: Maximally aligned with the Socratic Auditor Filter; highest potential for best-in-class diagnostic feedback; creates a strong, defensible technological moat.
+               * Cons: Highest R&D cost, longest time-to-market, and highest execution risk. It requires a world-class team with deep, specialized expertise in both LLMs and formal methods.
+               3. Strategy C: The Hybrid "Socratic Auditor" Strategy (Recommended)
+               * Description: This strategy offers a pragmatic balance between speed, cost, and pedagogical alignment. It is a modular, two-stage approach:
+               * Stage 1 (Initial Translation): This stage uses a fine-tuned Llemma model (as in Strategy A) or a tool inspired by LeanAide. Its sole purpose is to perform a "best-effort" translation of a student's informal reasoning step into a Lean Syntax object. This leverages existing models for the heavy lifting of probabilistic language understanding.
+               * Stage 2 (Audit & Feedback): This is the core of the Socratic engine. A dedicated, custom-built "Auditor" module takes the Syntax object and attempts to elaborate it into a type-checked Expr using the Lean 4 compiler. The success, failure, and specific error messages from this elaboration process are captured. This verified outcome is then fed into a "Pedagogical Feedback Generator" (which could be a smaller, specialized LLM or a rule-based system) to provide structured, Socratic guidance to the user.
+               * Pros: Balances time-to-market with the core pedagogical mission. It leverages existing SOTA models for the general translation task while focusing custom development effort on the high-value diagnostic and feedback components. The architecture is modular, testable, and extensible. It directly implements the principles of the Socratic Auditor Filter.
+               * Cons: More architecturally complex than Strategy A, but significantly less resource-intensive and risky than Strategy B.
+
+
+7.3 Recommended MVP Roadmap (Based on Strategy C)
+
+
+The recommended path forward is to adopt the Hybrid "Socratic Auditor" Strategy. The following table outlines a phased roadmap for its implementation, translating the strategy into an actionable project plan. Each phase is defined by its key features, the technologies required, and, most importantly, the Socratic metrics that will be used to measure its success, ensuring the pedagogical goals remain central throughout development.
+
+
+Table 4: Phased MVP Roadmap: Features, Technologies, and Socratic Metrics
+
+
+Phase
+	Key Features
+	Core Technologies
+	Key Socratic Metrics
+	Phase 1: The Core Auditor (Months 1-6)
+	- Interactive proof editor UI for a single, narrow mathematical domain (e.g., basic group theory axioms 6).
+	
+
+- User input of single, informal proof steps.
+- Initial Translation Module: Fine-tuned Llemma-7B model translates NL step to Lean Syntax.
+- Auditor Module: Attempts to elaborate Syntax to Expr via the Lean 4 compiler.
+- Feedback Module (v1): Translates common compiler errors into simple pedagogical hints.
+	- Model: Fine-tuned Llemma-7B on FormL4/Lean-Workbook.
+- Backend: Python server (e.g., FastAPI).
+- Formal Engine: Lean 4 with lake.
+- Metaprogramming: Lean 4 Syntax, Expr, and elaboration APIs.
+- Frontend: Web-based proof state viewer (e.g., React).
+	- Error Localization Accuracy: % of times the system correctly identifies the invalid step in a user's proof.
+- Feedback Quality (Human Eval): User rating of the clarity and helpfulness of generated hints.
+- Successful Step Rate: % of valid user steps correctly verified by the system.
+	Phase 2: Domain Expansion & Richer Feedback (Months 7-12)
+	- Expand supported domains to more complex algebra and number theory.
+- Handle multi-step informal reasoning blocks.
+- Feedback Module (v2): Use a specialized LLM to generate more nuanced, context-aware Socratic questions.
+- Introduce handling for basic LaTeX input ($...$).
+- User-specific error history and pattern recognition.
+	- Model: Fine-tuned Llemma-34B for improved translation.
+- Feedback LLM: Fine-tuned smaller model (e.g., Phi-3, Gemma) on a custom dataset of (compiler error, pedagogical hint) pairs.
+- Parser: Basic LaTeX-to-text conversion.
+	- Domain Coverage: # of topics from a standard undergraduate algebra curriculum covered.
+- Multi-step Coherence: Ability to maintain proof context across multiple user inputs.
+- Automated Feedback Quality (BLEU/ROUGE): Score of generated hints against a gold standard set.
+- Reduction in User Errors: Measure if users make fewer errors over time when using the tutor.
+	Phase 3: The Proactive Tutor (Months 13-18+)
+	- Proof Strategy Suggestions: Analyze the proof state to suggest high-level strategies or relevant lemmas from mathlib4.
+- Ambiguity Resolution: When input is ambiguous, prompt the user with clarifying questions (e.g., "By 'number', do you mean an integer or a real number?").
+- Full integration of complex LaTeX documents.
+- Generation of proof dependency graphs for visualization.6
+	- RAG Integration: System for retrieving relevant lemmas from mathlib4 to inform suggestions.
+- Advanced Parser: Robust LaTeX parsing library.
+- Graph Visualization: Library like D3.js or Vis.js integrated into the frontend.
+	- Strategy Relevance: % of suggested lemmas/strategies that are useful for completing the proof.
+- Task Completion Rate: % of users who successfully complete a proof from start to finish.
+- User Engagement: Session length and return user rate.
+	Works cited
+               1. From natural language to logic : r/logic - Reddit, accessed June 27, 2025, https://www.reddit.com/r/logic/comments/1gyaf96/from_natural_language_to_logic/
+               2. How do you interpret ambiguous math questions? - 2017 - Asexuality.org, accessed June 27, 2025, https://www.asexuality.org/en/topic/164497-how-do-you-interpret-ambiguous-math-questions/
+               3. Ambiguity in mathematical notation | The Reflective Educator, accessed June 27, 2025, https://davidwees.com/content/ambiguity-mathematical-notation/
+               4. Process-Driven Autoformalization in Lean 4 - OpenReview, accessed June 27, 2025, https://openreview.net/forum?id=k8KsI84Ds7
+               5. Herald: A Natural Language Annotated Lean 4 Dataset | OpenReview, accessed June 27, 2025, https://openreview.net/forum?id=Se6MgCtRhz
+               6. Formalization of mathematics - Duke Math Department, accessed June 27, 2025, https://math.duke.edu/mathplus/2024/formalization-mathematics
+               7. Lean4 | What's new - Terence Tao, accessed June 27, 2025, https://terrytao.wordpress.com/tag/lean4/
+               8. From Informal to Formal, Progressive Formalization an Example on "Solving Systems of Equations", accessed June 27, 2025, https://www.fi.uu.nl/publicaties/literatuur/4465.pdf
+               9. Informal Before Formal Mathematics, accessed June 27, 2025, https://informalmath.wordpress.com/2013/05/02/informal-to-formal-mathematics/
+               10. lean4 - When is the lean 4 "by" required? - Proof Assistants Stack Exchange, accessed June 27, 2025, https://proofassistants.stackexchange.com/questions/4029/when-is-the-lean-4-by-required
+               11. Tactics - Lean, accessed June 27, 2025, https://lean-lang.org/theorem_proving_in_lean4/tactics.html
+               12. Process-Driven Autoformalization in Lean 4, accessed June 27, 2025, https://arxiv.org/pdf/2406.01940
+               13. Minerva: Solving Quantitative Reasoning Problems with Language ..., accessed June 27, 2025, https://research.google/blog/minerva-solving-quantitative-reasoning-problems-with-language-models/
+               14. Logic-LangChain: Translating Natural Language to First Order Logic ..., accessed June 27, 2025, https://web.stanford.edu/class/archive/cs/cs224n/cs224n.1244/final-projects/AbhinavLalwaniIshikaaLunawat.pdf
+               15. Update `Lean.sublime-syntax` from Lean 3 to Lean 4​​ · Issue #3286 · sharkdp/bat · GitHub, accessed June 27, 2025, https://github.com/sharkdp/bat/issues/3286
+               16. how to add support for language Lean 4 in Lyx program listings - LaTeX Stack Exchange, accessed June 27, 2025, https://tex.stackexchange.com/questions/719504/how-to-add-support-for-language-lean-4-in-lyx-program-listings
+               17. Minerva - Google's Language Model for Quantitative Reasoning - Analytics Vidhya, accessed June 27, 2025, https://www.analyticsvidhya.com/blog/2022/08/minerva-googles-language-model-for-quantitative-reasoning/
+               18. Who Can Understand the Proof? A Window on Formalized Mathematics - Stephen Wolfram Writings, accessed June 27, 2025, https://writings.stephenwolfram.com/2025/01/who-can-understand-the-proof-a-window-on-formalized-mathematics/
+               19. NLIR: Natural Language Intermediate Representation for ..., accessed June 27, 2025, https://openreview.net/forum?id=QzOc0tpdef&referrer=%5Bthe%20profile%20of%20Laetitia%20Teodorescu%5D(%2Fprofile%3Fid%3D~Laetitia_Teodorescu1)
+               20. NLIR: Natural Language Intermediate Representation for ..., accessed June 27, 2025, https://openreview.net/forum?id=QzOc0tpdef
+               21. Introduction - Metaprogramming in Lean 4, accessed June 27, 2025, https://leanprover-community.github.io/lean4-metaprogramming-book/
+               22. Metaprogramming in Lean 4, accessed June 27, 2025, http://anggtwu.net/snarf/https/leanprover-community.github.io/lean4-metaprogramming-book/print.pdf
+               23. Overview - Metaprogramming in Lean 4, accessed June 27, 2025, https://leanprover-community.github.io/lean4-metaprogramming-book/main/02_overview.html
+               24. Metaprogramming for dummies · leanprover-community/mathlib4 Wiki - GitHub, accessed June 27, 2025, https://github.com/leanprover-community/mathlib4/wiki/Metaprogramming-for-dummies
+               25. Introduction to Metaprogramming in Lean 4 - YouTube, accessed June 27, 2025, https://www.youtube.com/watch?v=Ix8zSpsfbDk
+               26. Lean Together 2021: Metaprogramming in Lean 4 - YouTube, accessed June 27, 2025, https://www.youtube.com/watch?v=hxQ1vvhYN_U
+               27. 13.3. The Tactic Language - Lean, accessed June 27, 2025, https://lean-lang.org/doc/reference/latest/Tactic-Proofs/The-Tactic-Language/
+               28. 6. Tactics — The Lean Reference Manual 3.3.0 documentation, accessed June 27, 2025, https://leanprover.github.io/reference/tactics.html
+               29. A Practical Guide to Writing Tactics in Lean - Zulip, accessed June 27, 2025, https://leanprover.zulipchat.com/user_uploads/3121/9Zt_fQ_AbwyDrz_EAIQLBlNk/TacticGuidell.pdf
+               30. madvorak/lean4-tactics: Overview of tactics in Lean 4 for beginners - GitHub, accessed June 27, 2025, https://github.com/madvorak/lean4-tactics
+               31. Lean 4 tactic cheatsheet - GitHub, accessed June 27, 2025, https://raw.githubusercontent.com/fpvandoorn/LeanCourse24/master/lean-tactics.pdf
+               32. How to parse the content of a string as Lean 4 code? - Proof Assistants Stack Exchange, accessed June 27, 2025, https://proofassistants.stackexchange.com/questions/4873/how-to-parse-the-content-of-a-string-as-lean-4-code
+               33. 19.4. Defining New Syntax - Lean, accessed June 27, 2025, https://lean-lang.org/doc/reference/4.19.0-rc2/Notations-and-Macros/Defining-New-Syntax/
+               34. fgdorais/lean4-parser: Parser Combinator Library for Lean 4 - GitHub, accessed June 27, 2025, https://github.com/fgdorais/lean4-parser
+               35. Lean.Parser.Basic, accessed June 27, 2025, https://www.cs.rochester.edu/~yzhu104/lean-gccjit/Lean/Parser/Basic.html
+               36. lean4/src/Lean/Parser/Basic.lean at master - GitHub, accessed June 27, 2025, https://github.com/leanprover/lean4/blob/master/src/Lean/Parser/Basic.lean
+               37. Lean.Parser.Types, accessed June 27, 2025, https://leanprover-community.github.io/mathlib4_docs/Lean/Parser/Types.html
+               38. [Literature Review] Process-Driven Autoformalization in Lean 4, accessed June 27, 2025, https://www.themoonlight.io/en/review/process-driven-autoformalization-in-lean-4
+               39. (PDF) Process-Driven Autoformalization in Lean 4 - ResearchGate, accessed June 27, 2025, https://www.researchgate.net/publication/381158622_Process-Driven_Autoformalization_in_Lean_4
+               40. Mathematical Reasoning in Large Language Models - HKU Scholars Hub, accessed June 27, 2025, https://hub.hku.hk/bitstream/10722/355601/1/FullText.pdf
+               41. An Evaluation Benchmark for Autoformalization in Lean4 | Papers With Code, accessed June 27, 2025, https://paperswithcode.com/paper/an-evaluation-benchmark-for-autoformalization
+               42. Herald: A Natural Language Annotated Lean 4 Dataset - arXiv, accessed June 27, 2025, https://arxiv.org/html/2410.10878v1
+               43. Topic: LeanAide translation: Natural language to Lean 4 - Zulip Chat Archive, accessed June 27, 2025, https://leanprover-community.github.io/archive/stream/113488-general/topic/LeanAide.20translation.3A.20Natural.20language.20to.20Lean.204.html
+               44. siddhartha-gadgil/LeanAide: Tools based on AI for helping ... - GitHub, accessed June 27, 2025, https://github.com/siddhartha-gadgil/LeanAide
+               45. LeanAide translation: Natural language to Lean 4 - YouTube, accessed June 27, 2025, https://www.youtube.com/watch?v=_NMquXd0Qos
+               46. LeanAide: Translation from natural langauge to Lean 4 and Mathlib 4 - YouTube, accessed June 27, 2025, https://www.youtube.com/watch?v=IZe3fBZLBR0
+               47. arxiv.org, accessed June 27, 2025, https://arxiv.org/html/2310.10631v3
+               48. arXiv:2310.10631v3 [cs.CL] 15 Mar 2024, accessed June 27, 2025, http://arxiv.org/pdf/2310.10631
+               49. Paper page - Llemma: An Open Language Model For Mathematics - Hugging Face, accessed June 27, 2025, https://huggingface.co/papers/2310.10631
+               50. Llemma: An Open Language Model for Mathematics - OpenReview, accessed June 27, 2025, https://openreview.net/forum?id=4WnqRR915j
+               51. Llemma: An Open Language Model For Mathematics - Blog - EleutherAI, accessed June 27, 2025, https://blog.eleuther.ai/llemma/
+               52. wellecks/llemma_formal2formal: Llemma formal2formal ... - GitHub, accessed June 27, 2025, https://github.com/wellecks/llemma_formal2formal
+               53. Minerva: AI Advancements in Quantitative Reasoning - Rapidops, accessed June 27, 2025, https://www.rapidops.com/ai-tracker/minerva/
+               54. Minerva - Accubits, accessed June 27, 2025, https://accubits.com/large-language-models-leaderboard/minerva/
+               55. GPT-f paper - Google Groups, accessed June 27, 2025, https://groups.google.com/g/metamath/c/gZPfD-DlQBI
+               56. Generative language modeling for automated theorem proving - OpenAI, accessed June 27, 2025, https://openai.com/index/generative-language-modeling-for-automated-theorem-proving/
+               57. EvoGPT-f: An Evolutionary GPT Framework for Benchmarking Formal Math Languages, accessed June 27, 2025, https://arxiv.org/html/2402.16878v1
+               58. Proof-Pile-2 - GM-RKB, accessed June 27, 2025, https://www.gabormelli.com/RKB/Proof-Pile-2
+               59. EleutherAI/proof-pile-2 · Datasets at Hugging Face, accessed June 27, 2025, https://huggingface.co/datasets/EleutherAI/proof-pile-2
+               60. license - togethercomputer/RedPajama-Data - GitHub, accessed June 27, 2025, https://github.com/togethercomputer/RedPajama-Data/blob/main/LICENSE
+               61. RedPajama-Data-v2: an Open Dataset with 30 Trillion Tokens for Training Large Language Models - GitHub, accessed June 27, 2025, https://github.com/togethercomputer/RedPajama-Data
+               62. keirp/OpenWebMath - GitHub, accessed June 27, 2025, https://github.com/keirp/OpenWebMath
+               63. internlm/Lean-Workbook · Datasets at Hugging Face, accessed June 27, 2025, https://huggingface.co/datasets/internlm/Lean-Workbook
+               64. [Revue de papier] Lean Workbook: A large-scale Lean problem set formalized from natural language math problems, accessed June 27, 2025, https://www.themoonlight.io/fr/review/lean-workbook-a-large-scale-lean-problem-set-formalized-from-natural-language-math-problems
+               65. A large-scale Lean problem set formalized from natural language math problems - arXiv, accessed June 27, 2025, https://arxiv.org/html/2406.03847v1

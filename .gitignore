@@ -1,0 +1,26 @@
+# Python/Flask specific
+altera-backend/__pycache__/
+altera-backend/venv/
+altera-backend/instance/
+*.pyc
+
+# Node/React specific
+# Ignore node_modules in both the root and the frontend folder
+node_modules/
+altera-frontend/node_modules/
+altera-frontend/dist/
+
+# User-specific files and documents
+# This will ignore all .pdf, .html, and .txt files in the root directory
+/*.pdf
+/*.html
+/*.txt
+
+# IDE and OS files
+.DS_Store
+altera.code-workspace
+
+# Secrets - NEVER commit your .env files
+.env
+.env.*
+!/.env.example
