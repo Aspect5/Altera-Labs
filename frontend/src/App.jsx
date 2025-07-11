@@ -5,9 +5,41 @@ import CodeMirror from '@uiw/react-codemirror';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { basicSetup } from '@uiw/codemirror-extensions-basic-setup';
 
-// Main App Component - Manages routing and CORE application state
+// --- NEW: KaTeX for LaTeX Rendering ---
+import 'katex/dist/katex.min.css'; // Import KaTeX CSS
+import { InlineMath, BlockMath } from 'react-katex';
+
+// --- NEW: LaTeX Renderer Component ---
+// This component parses a string for LaTeX delimiters ($...$ and $$...$$)
+// and renders the math using KaTeX.
+function LatexRenderer({ text }) {
+    // Regular expression to split the text by inline and block math delimiters.
+    // It captures the delimiters and the content inside them.
+    const parts = text.split(/(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$)/g);
+
+    return (
+        <div className="text-white whitespace-pre-wrap">
+            {parts.map((part, index) => {
+                if (part.startsWith('$$') && part.endsWith('$$')) {
+                    // It's a block-level equation. Render with BlockMath.
+                    // Slice(2, -2) removes the '$$' delimiters.
+                    return <BlockMath key={index} math={part.slice(2, -2)} />;
+                } else if (part.startsWith('$') && part.endsWith('$')) {
+                    // It's an inline equation. Render with InlineMath.
+                    // Slice(1, -1) removes the '$' delimiters.
+                    return <InlineMath key={index} math={part.slice(1, -1)} />;
+                }
+                // It's a plain text part.
+                return <span key={index}>{part}</span>;
+            })}
+        </div>
+    );
+}
+
+
+// --- Main App Component ---
 export default function App() {
-    const [route, setRoute] = useState('dashboard'); // 'dashboard' or 'session'
+    const [route, setRoute] = useState('dashboard');
     const [classes, setClasses] = useState([]); 
     
     // Session-specific state
@@ -17,28 +49,24 @@ export default function App() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
 
-    const navigate = (newRoute) => {
-        setRoute(newRoute);
-    };
+    const navigate = (newRoute) => setRoute(newRoute);
 
-    // Handler to add a new class to the state
     const handleAddClass = (newClass) => {
         setClasses(prevClasses => [...prevClasses, newClass]);
     };
 
-    // Handler to start the proof auditor session
     const handleStartAuditorSession = async () => {
         setIsLoading(true);
         setError('');
         try {
             const response = await fetch('http://127.0.0.1:5000/startSession', { method: 'POST' });
-            if (!response.ok) throw new Error(`Server error: ${response.status}`);
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             const data = await response.json();
             
             setSessionId(data.sessionId);
             setProofCode(data.proof_code);
             setChatHistory([{ author: 'ai', text: data.ai_response_text }]);
-            navigate('session'); // Switch to the session view
+            navigate('session');
         } catch (err) {
             setError(`Failed to start session. Is the backend server running? Details: ${err.message}`);
         } finally {
@@ -46,7 +74,6 @@ export default function App() {
         }
     };
     
-    // Handler to send a message within the session
     const handleSendMessage = async (message) => {
         if (!sessionId) return;
         const userMessage = { author: 'user', text: message };
@@ -58,7 +85,7 @@ export default function App() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ sessionId, message }),
             });
-            if (!response.ok) throw new Error(`Server error: ${response.status}`);
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             const data = await response.json();
             
             setChatHistory(prev => [...prev, { author: 'ai', text: data.ai_response_text, isVerified: data.is_verified }]);
@@ -76,7 +103,7 @@ export default function App() {
                         Altera Labs
                     </h1>
                     {route === 'session' && (
-                        <button onClick={() => navigate('dashboard')} className="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg">
+                        <button onClick={() => navigate('dashboard')} className="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg transition-transform transform hover:scale-105">
                             ← Back to Dashboard
                         </button>
                     )}
@@ -126,17 +153,15 @@ function Dashboard({ classes, onAddClass, onStartAuditor, isLoadingAuditor, audi
 
     return (
         <div className="container mx-auto p-8">
-            {/* MVP PROOF AUDITOR SECTION */}
             <div className="bg-gray-800 rounded-xl shadow-xl p-6 mb-8 text-center">
                 <h3 className="text-2xl font-bold text-white mb-2">AI Cognitive Partner</h3>
                 <p className="text-gray-400 mb-4">Launch a session to work through a formal proof, step-by-step.</p>
-                <button onClick={onStartAuditor} disabled={isLoadingAuditor} className="bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-2 px-6 rounded-lg shadow-lg transition-transform transform hover:scale-105 disabled:bg-gray-500">
+                <button onClick={onStartAuditor} disabled={isLoadingAuditor} className="bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-2 px-6 rounded-lg shadow-lg transition-transform transform hover:scale-105 disabled:bg-gray-500 disabled:cursor-not-allowed">
                     {isLoadingAuditor ? 'Starting...' : 'Launch Proof Auditor'}
                 </button>
                 {auditorError && <p className="text-red-400 mt-3">{auditorError}</p>}
             </div>
 
-            {/* CLASS MANAGEMENT SECTION */}
             <div className="flex justify-between items-center mb-8">
                 <h2 className="text-3xl font-semibold">Your Classes</h2>
                 <button onClick={() => setIsModalOpen(true)} className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">
@@ -145,10 +170,10 @@ function Dashboard({ classes, onAddClass, onStartAuditor, isLoadingAuditor, audi
             </div>
             <div className="space-y-4">
                 {classes.map((cls) => (
-                    <div key={cls.id} className="bg-gray-800 rounded-xl shadow-lg">
+                    <div key={cls.id} className="bg-gray-800 rounded-xl shadow-lg transition-all duration-300">
                         <div className="p-6 cursor-pointer" onClick={() => setExpandedClass(expandedClass === cls.id ? null : cls.id)}>
                             <h3 className="text-xl font-bold text-white">{cls.name}</h3>
-                            <p className="text-gray-400 text-sm">{expandedClass === cls.id ? 'Collapse' : 'Expand to see concepts'}</p>
+                            <p className="text-gray-400 text-sm">{expandedClass === cls.id ? 'Click to Collapse' : 'Click to Expand'}</p>
                         </div>
                         {expandedClass === cls.id && (
                             <div className="p-6 border-t border-gray-700">
@@ -192,7 +217,6 @@ function AddClassModal({ onClose, onAddClass }) {
             const response = await fetch('http://127.0.0.1:5000/addClass', { method: 'POST', body: formData });
             if (!response.ok) throw new Error(`Server error: ${await response.text()}`);
             const result = await response.json();
-            // Pass the new class data up to the main app state
             onAddClass({ name: result.className, id: result.classId, concepts: result.concepts });
             onClose();
         } catch (err) {
@@ -214,7 +238,7 @@ function AddClassModal({ onClose, onAddClass }) {
                     </div>
                     <div className="mb-6">
                         <label className="block text-gray-400 text-sm font-bold mb-2">Syllabus (.pdf, .txt)</label>
-                        <input type="file" onChange={(e) => setSyllabus(e.target.files[0])} accept=".pdf,.txt" className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-cyan-500 file:text-white hover:file:bg-cyan-600" required />
+                        <input type="file" onChange={(e) => setSyllabus(e.target.files[0])} accept=".pdf,.txt,.md" className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-cyan-500 file:text-white hover:file:bg-cyan-600" required />
                     </div>
                     <div className="flex justify-end gap-4">
                         <button type="button" onClick={onClose} className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">Cancel</button>
@@ -231,14 +255,14 @@ function ExplanationModal({ explanation, onClose }) {
         <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50" onClick={onClose}>
             <div className="bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-2xl m-4" onClick={e => e.stopPropagation()}>
                 <h3 className="text-2xl font-bold mb-4 text-cyan-400">Explanation: {explanation.concept}</h3>
-                {explanation.isLoading ? <p>Loading...</p> : <p className="text-gray-300 whitespace-pre-wrap">{explanation.text}</p>}
+                {explanation.isLoading ? <p>Loading...</p> : <LatexRenderer text={explanation.text} />}
                 <button onClick={onClose} className="mt-6 bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">Close</button>
             </div>
         </div>
     );
 }
 
-// --- SESSION COMPONENTS (Proof Auditor) ---
+// --- SESSION COMPONENTS ---
 
 function SessionView({ proofCode, chatHistory, onSendMessage }) {
     const [leftPanelWidth, setLeftPanelWidth] = useState(50);
@@ -312,15 +336,25 @@ function ChatPanel({ history, onSendMessage }) {
 
                     return (
                         <div key={index} className={`flex my-2 ${isUser ? 'justify-end' : 'justify-start'} ${isSystem ? 'justify-center' : ''}`}>
-                            <div className={`rounded-xl p-3 max-w-lg ${bubbleStyles} ${borderStyles}`}><p className="text-white whitespace-pre-wrap">{msg.text}</p></div>
+                            <div className={`rounded-xl p-3 max-w-lg ${bubbleStyles} ${borderStyles}`}>
+                                {/* UPDATED: Use LatexRenderer for all chat messages */}
+                                <LatexRenderer text={msg.text} />
+                            </div>
                         </div>
                     );
                 })}
                 <div ref={chatEndRef} />
             </div>
             <div className="p-4 border-t border-gray-700">
+                 {/* NEW: Live LaTeX Preview */}
+                {message.trim() && (
+                    <div className="p-3 mb-3 bg-gray-900 rounded-lg border border-gray-700">
+                        <h4 className="text-xs text-gray-500 mb-2 font-semibold tracking-wider uppercase">Preview</h4>
+                        <LatexRenderer text={message} />
+                    </div>
+                )}
                 <div className="flex items-center bg-gray-700 rounded-lg">
-                    <input type="text" value={message} onChange={(e) => setMessage(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSend()} placeholder="Type your next logical step..." className="flex-grow bg-transparent p-3 text-white focus:outline-none" />
+                    <input type="text" value={message} onChange={(e) => setMessage(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSend()} placeholder="Type your next step or question... Use $...$ for math." className="flex-grow bg-transparent p-3 text-white focus:outline-none" />
                     <button onClick={handleSend} className="p-3 text-cyan-400 hover:text-cyan-300 disabled:text-gray-500" disabled={!message.trim()}>
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
                     </button>
@@ -332,8 +366,15 @@ function ChatPanel({ history, onSendMessage }) {
 
 function LeanEditor({ content }) {
     return (
-        <div className="flex-grow rounded-lg overflow-hidden border border-gray-700">
-             <CodeMirror value={content} height="100%" theme={oneDark} extensions={[basicSetup()]} readOnly={true} />
+        <div className="flex-grow rounded-lg overflow-hidden border border-gray-700 h-full">
+             <CodeMirror 
+                value={content} 
+                height="100%" 
+                theme={oneDark} 
+                extensions={[basicSetup({lineNumbers: true, foldGutter: true})]} 
+                readOnly={true} 
+                style={{height: '100%'}}
+             />
         </div>
     );
 }
