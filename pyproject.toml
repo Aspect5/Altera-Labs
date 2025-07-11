@@ -1,0 +1,11 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "altera-local-dev-backend"
+version = "0.1.0"
+description = "Local development package for Altera Labs Backend"
+
+[tool.setuptools.packages.find]
+include = ["backend*"]

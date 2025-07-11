@@ -1,0 +1,12 @@
+README.md
+pyproject.toml
+altera_local_dev_backend.egg-info/PKG-INFO
+altera_local_dev_backend.egg-info/SOURCES.txt
+altera_local_dev_backend.egg-info/dependency_links.txt
+altera_local_dev_backend.egg-info/top_level.txt
+backend/__init__.py
+backend/app.py
+backend/bootstrap_lean_cache.py
+backend/local_llm_stub.py
+backend/tests/__init__.py
+backend/tests/test_app.py

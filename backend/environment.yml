@@ -19,5 +19,7 @@ dependencies:
 
   # Dependencies to install with Pip
   - pip:
-    # Used in a legacy endpoint, but good to have for now to prevent import errors.
-    - PyMuPDF
+      - PyMuPDF
+      - pexpect
+      - tqdm                   # progress bar for cache download
+      - requests_toolbelt      # faster streaming download (optional)
