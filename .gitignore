@@ -1,30 +1,44 @@
-# Python/Flask specific
-altera-backend/__pycache__/
-altera-backend/venv/
-altera-backend/instance/
-*.pyc
-
-# Node/React specific
-# Ignore node_modules in both the root and the frontend folder
-node_modules/
-altera-frontend/node_modules/
-altera-frontend/dist/
-
-# User-specific files and documents
-# This will ignore all .pdf, .html, and .txt files in the root directory
-/*.pdf
-/*.html
-/*.txt
-
-# IDE and OS files
+# General purpose ignores
 .DS_Store
-altera.code-workspace
+*.log
+*.swo
+*.swp
 
-# Secrets - NEVER commit your .env files
+# IDE and editor specific files
+.vscode/
+.idea/
+
+# Python / Backend related ignores
+__pycache__/
+*.pyc
 .env
-.env.*
-!/.env.example
+venv/
+.venv/
+env/
+instance/
 
-# Ignore the entire Lean project folder
-altera-backend/lean_verifier/
-altera-backend/app.py
+# Python packaging artifacts
+/backend/build/
+/backend/dist/
+*.egg-info/
+
+# Test artifacts
+.pytest_cache/
+.coverage
+
+# Node.js / Frontend related ignores
+/frontend/node_modules/
+/frontend/dist/
+/frontend/.pnpm-debug.log*
+/frontend/.eslintcache
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Lean / Lake related ignores
+# These paths are specific to the lean_verifier subdirectory
+/backend/lean_verifier/build/
+/backend/lean_verifier/.lake/
+
+# Temporary test files that might be created
+/backend/lean_verifier/Test.lean
