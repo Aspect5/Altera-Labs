@@ -1,15 +1,6 @@
+[package]
 name = "lean_verifier"
 version = "0.1.0"
-keywords = ["math"]
-defaultTargets = ["LeanVerifier"]
 
-[leanOptions]
-pp.unicode.fun = true # pretty-prints `fun a ↦ b`
-autoImplicit = false
-
-[[require]]
-name = "mathlib"
-scope = "leanprover-community"
-
-[[lean_lib]]
-name = "LeanVerifier"
+[dependencies]
+mathlib = {git = "https://github.com/leanprover-community/mathlib4"}
