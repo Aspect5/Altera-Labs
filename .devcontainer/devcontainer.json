@@ -15,6 +15,12 @@
   // This command will run automatically AFTER the container is created.
   "postCreateCommand": ".devcontainer/post-create.sh",
 
+  // --- FIX: Directly set the PATH for the entire VS Code environment ---
+  // This is a more reliable way to ensure the Lean extension finds elan.
+  "remoteEnv": {
+    "PATH": "${containerEnv:PATH}:/home/vscode/.elan/bin"
+  },
+
   // This will automatically install the Lean 4 extension for you.
   "customizations": {
     "vscode": {

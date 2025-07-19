@@ -7,7 +7,7 @@ echo "--- Installing elan (Lean's toolchain manager) ---"
 # We add 'sudo' because we are in a clean container and need permissions.
 sudo -u vscode curl https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -sSf | sudo -u vscode sh -s -- -y
 
-# Add elan to the PATH for the rest of the script
+# Add elan to the PATH for the rest of this script's execution.
 source /home/vscode/.elan/env
 
 echo "--- Setting up Lean project in backend/lean_verifier ---"
@@ -41,4 +41,3 @@ cd /workspaces/Altera-Labs/frontend
 npm install
 
 echo "--- ✅✅✅ Dev Container setup complete! ✅✅✅ ---"
-
