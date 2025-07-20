@@ -6,144 +6,133 @@ This project is the backend and frontend for our "Proof State Auditor" MVP, a sp
 
 ---
 
-## ✨ Core Features (Current)
+## ✨ Core Features
 
-*   **Syllabus Concept Extraction**: Users can upload a class syllabus (`.pdf` or `.txt`), and the AI will analyze it to extract a list of key concepts for the course.
-*   **Concept Explanation**: Users can click on an extracted concept to get a concise, university-level explanation.
-*   **The Socratic Verifier (Proof Auditor)**: The cornerstone of the application.
-    *   **Natural Language Interaction**: Students propose their next step in a proof using plain English.
-    *   **Intent-Aware Routing**: The system intelligently determines if the user is attempting a proof step, asking a question, or making a comment.
-    *   **Formal Verification**: User steps are translated into formal Lean 4 tactics and verified for logical correctness using a real Lean compiler.
-    *   **Socratic Feedback**: If a step is incorrect, the AI uses the compiler's error to generate a targeted, pedagogical hint, guiding the student without giving away the answer.
+* **Syllabus Concept Extraction**: Users can upload a class syllabus (`.pdf` or `.txt`), and the AI will analyze it to extract a list of key concepts for the course.
+* **Concept Explanation**: Users can click on an extracted concept to get a concise, university-level explanation.
+* **The Socratic Verifier (Proof Auditor)**: The cornerstone of the application.
+    * **Natural Language Interaction**: Students propose their next step in a proof using plain English or describe their conceptual thinking.
+    * **Intent-Aware Routing**: The system intelligently determines if the user is attempting a formal `PROOF_STEP`, describing a `CONCEPTUAL_STEP`, asking a `QUESTION`, or making a general comment.
+    * **Formal Verification**: User steps are translated into formal Lean 4 tactics and verified for logical correctness using a real Lean compiler.
+    * **Socratic Feedback**: If a step is incorrect, the AI uses the compiler's error to generate a targeted, pedagogical hint, guiding the student without giving away the answer.
 
 ---
 
 ## 🛠️ Technology Stack
 
-| Component      | Technologies                                               |
-| -------------- | ---------------------------------------------------------- |
-| **Backend**    | Python 3.11, Flask, Conda, Google Gemini API, Lean 4 (via `lake`) |
-| **Frontend**   | React, Vite, Tailwind CSS, CodeMirror                      |
-| **Dev Tools**  | VS Code (Multi-Root Workspace recommended)                 |
+| Component          | Technologies                                                     |
+| ------------------ | ---------------------------------------------------------------- |
+| **Backend** | Python 3.11, Flask, Google Gemini API, Lean 4 (via `lake`)       |
+| **Frontend** | React, Vite, Tailwind CSS, CodeMirror                            |
+| **Development** | VS Code Dev Containers, Docker, Conda, Node.js                   |
 
 ---
 
 ## 🚀 Getting Started
 
-Follow these instructions to get the development environment set up and running on your local machine.
+This project is configured to use VS Code Dev Containers, which is the **highly recommended** way to get started. It automatically sets up a consistent and fully-configured development environment with all necessary tools and dependencies.
 
-### 1. Prerequisites
+### Option 1: Recommended Setup (VS Code Dev Containers)
 
-Ensure you have the following software installed on your system:
+This method automates the installation of Python, Node.js, the Lean 4 toolchain, and all project dependencies.
 
-*   **Conda**: [Anaconda](https://www.anaconda.com/products/distribution) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html) for Python environment management.
-*   **Node.js**: Version 18.x or later. We recommend using [nvm](https://github.com/nvm-sh/nvm) to manage Node versions.
-*   **Lean 4 Toolchain**: Install via `elan` by following the [official Lean 4 installation instructions](https://lean-lang.org/install/).
+#### Prerequisites
 
-### 2. Initial Setup
+1.  **Docker Desktop**: Install it from the [official Docker website](https://www.docker.com/products/docker-desktop/).
+2.  **Visual Studio Code**: Install it from the [official VS Code website](https://code.visualstudio.com/).
+3.  **VS Code Dev Containers extension**: Install this from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers).
 
-#### Step A: Clone the Repository
+#### Steps
 
-```bash
-git clone <your-repository-url>
-cd Altera-Labs
-```
-
-#### Step B: Configure the Backend
-
-1.  **Navigate to the backend directory:**
+1.  **Clone the Repository:**
     ```bash
-    cd altera-backend
+    git clone <your-repository-url>
+    cd Altera-Labs
     ```
 
-2.  **Create the `.env` file:** Create a new file named `.env` in this directory and add the following content. This file stores your secret keys and local paths.
-
+2.  **Create the Backend `.env` file:**
+    Navigate to the `backend` directory and create a file named `.env`. This file is required to store your API key.
+    ```bash
+    cd backend
+    touch .env
+    ```
+    Add the following content to the `backend/.env` file:
     ```dotenv
     # .env file for Altera Labs Backend
 
     # Your Google AI Studio API Key
     GEMINI_API_KEY="YOUR_GEMINI_API_KEY_HERE"
-
-    # Full, absolute path to your 'lake' executable.
-    # Find this by running 'which lake' (macOS/Linux) or 'where lake' (Windows) in your terminal.
-    LAKE_EXECUTABLE_PATH="/path/to/your/.elan/bin/lake"
-
-    # Optional: Only needed if you are on a network with an SSL proxy (e.g., university or corporate VPN)
-    # REQUESTS_CA_BUNDLE="/path/to/your/certificate.pem"
     ```
+    *Note: The `LAKE_EXECUTABLE_PATH` is set automatically within the Dev Container.*
 
-3.  **Create the Lean Verifier Project:** Our backend needs a dedicated Lean project to use as a sandbox. Run this command from the `altera-backend` directory:
+3.  **Open in Dev Container:**
+    Open the `Altera-Labs` folder in VS Code. A pop-up will appear in the bottom-right corner. Click **"Reopen in Container"**.
+
+    VS Code will now build the Docker image and configure the environment. This may take several minutes on the first run as it downloads all the necessary components. The `post-create.sh` script will automatically install all Python and Node.js dependencies.
+
+4.  **Run the Application:**
+    Once the container is built and your VS Code has reloaded, you can start the application. You will need **two separate terminals** inside VS Code. You can open a new terminal with `Terminal > New Terminal`.
+
+    **Terminal 1: Start the Backend Server**
     ```bash
-    lake new lean_verifier math
+    # This command is run from the root of the workspace
+    python backend/app.py
     ```
-    This creates a `lean_verifier` folder, which our Python script is configured to use.
+    The backend will be available inside the container on port 5000.
 
-4.  **Create the Conda Environment:** This command reads the `environment.yml` file and installs all required Python packages into an isolated environment named `altera-labs`.
+    **Terminal 2: Start the Frontend Server**
     ```bash
-    conda env create -f environment.yml
+    # This command is also run from the root of the workspace
+    cd frontend
+    npm run dev
     ```
+    The frontend will be available on port 5173. VS Code should automatically forward this port, allowing you to open `http://localhost:5173` in your local browser to use the application.
 
-#### Step C: Configure the Frontend
+### Option 2: Alternative (Manual Setup)
 
-1.  **Navigate to the frontend directory:**
-    ```bash
-    # From the altera-backend directory
-    cd ../altera-frontend
-    ```
+If you cannot use Docker or Dev Containers, you can set up the project manually.
 
-2.  **Install Node.js dependencies:**
-    ```bash
-    npm install
-    ```
+#### Prerequisites
 
-### 3. Running the Application
+* **Conda**: For Python environment management.
+* **Node.js**: v18.x or later.
+* **Lean 4 Toolchain**: Install via `elan` from the [official Lean 4 installation instructions](https://lean-lang.org/install/).
 
-You will need **two separate terminals** running simultaneously.
+#### Steps
 
-**Terminal 1: Start the Backend Server**
+1.  **Clone & Configure Backend:**
+    * `git clone <your-repository-url>`
+    * `cd Altera-Labs/backend`
+    * Create the `.env` file as described in Step 2 of the containerized setup. **Crucially**, you must now also manually find and set the `LAKE_EXECUTABLE_PATH`.
+        ```dotenv
+        # Find this by running 'which lake' (macOS/Linux) or 'where lake' (Windows)
+        LAKE_EXECUTABLE_PATH="/path/to/your/.elan/bin/lake"
+        ```
+    * Install Python dependencies: `pip install -r requirements.txt`
 
-```bash
-# Navigate to the backend folder
-cd altera-backend
+2.  **Configure Frontend:**
+    * `cd ../frontend`
+    * Install Node.js dependencies: `npm install`
 
-# Activate the Conda environment
-conda activate altera-labs
-
-# Run the Flask app
-python app.py
-```
-You should see output indicating the server is running on `http://127.0.0.1:5000`.
-
-**Terminal 2: Start the Frontend Server**
-
-```bash
-# Navigate to the frontend folder
-cd altera-frontend
-
-# Run the Vite development server
-npm run dev
-```
-You should see output indicating the frontend is available at a local URL, typically `http://localhost:5173`.
-
-**Usage:**
-Open the frontend URL (e.g., `http://localhost:5173`) in your web browser to use the application.
+3.  **Run the Application:**
+    Follow Step 4 from the containerized setup, running the backend and frontend servers in two separate local terminals.
 
 ---
 
 ## 🏛️ Project Architecture
 
-The application follows a standard client-server model but with a unique backend loop for proof verification.
+The application follows a client-server model with a unique backend loop for proof verification.
 
-1.  **User Onboarding**: The user starts at the **Dashboard**, where they can upload a syllabus to create a "Class". The backend's `/addClass` endpoint uses an LLM to parse the syllabus and extract key concepts.
-2.  **Launching the Auditor**: From the Dashboard, the user launches the **Proof Auditor**. This calls `/startSession` to initialize a new proof attempt.
+1.  **User Onboarding**: A user can upload a syllabus to the `/api/addClass` endpoint, which uses an LLM to extract key concepts for a "Class".
+2.  **Launching the Auditor**: The user launches the **Proof Auditor**, which calls `/api/startSession` to initialize a new proof attempt.
 3.  **The Interactive Loop**: Inside the **Session View**:
-    *   The user sends a message.
-    *   The backend's `/sendMessage` endpoint first uses an **Intent Router** to classify the message (`PROOF_STEP`, `QUESTION`, `META_COMMENT`).
-    *   If it's a `PROOF_STEP`, the backend uses an LLM to generate a Lean 4 tactic.
-    *   This tactic is injected into the proof file and compiled by the **Lean Verifier** (`lake build`).
-    *   **If it verifies:** The proof state is updated, and a confirmation is sent.
-    *   **If it fails:** The compiler error is used by another LLM call to generate a **Socratic hint**.
-    *   The AI's final response and the updated proof state are sent back to the frontend.
+    * The user sends a message to the `/api/message` endpoint.
+    * The backend's **Intent Router** classifies the message (`PROOF_STEP`, `CONCEPTUAL_STEP`, `QUESTION`, etc.).
+    * If it's a proof attempt, the backend uses an LLM to generate a Lean 4 tactic.
+    * This tactic is injected into a temporary proof file and compiled by the **Lean Verifier** (`lake build`).
+    * **If it verifies:** The proof state is updated, and a confirmation is sent.
+    * **If it fails:** The compiler error is used by another LLM call to generate a **Socratic hint**.
+    * The AI's final response and the updated proof state are sent back to the frontend.
 
 ---
 
@@ -151,7 +140,8 @@ The application follows a standard client-server model but with a unique backend
 
 Our goal is to evolve beyond the MVP by building out our "Four Vectors" of pedagogical differentiation.
 
-*   **Metacognitive Scaffolding**: Move beyond step-by-step verification to explicitly teach problem-solving strategies like **Plan-Monitor-Reflect**. The AI will ask students to state their plan *before* writing code.
-*   **Affective Computing**: Integrate emotion detection (based on text pace, phrasing, and explicit feedback) to respond to student frustration with increased support or a change in strategy.
-*   **Dynamic Knowledge Modeling**: Use the concepts extracted from the syllabus to build a persistent, personalized **Knowledge Graph** for each student. Track mastery of concepts using Bayesian Knowledge Tracing (BKT) based on their success and failure in proofs.
-*   **Immersive Pedagogy**: Replace static text responses with interactive visualizations and "Explorable Explanations," allowing students to manipulate variables and see the mathematical consequences in real-time.
+* **Metacognitive Scaffolding**: Move beyond step-by-step verification to explicitly teach problem-solving strategies.
+* **Affective Computing**: Integrate emotion detection to respond to student frustration with increased support.
+* **Dynamic Knowledge Modeling**: Build a persistent, personalized Knowledge Graph for each student.
+* **Immersive Pedagogy**: Replace static text responses with interactive visualizations and "Explorable Explanations."
+
