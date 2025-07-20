@@ -1,4 +1,5 @@
-import LeanVerifier
+import Mathlib.Data.Real.Basic
 
-def main : IO Unit :=
-  IO.println s!"Hello, {hello}!"
+example (a b : ℝ) : a * b = b * a := by
+  ring
+  sorry
