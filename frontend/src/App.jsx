@@ -59,7 +59,8 @@ export default function App() {
         setIsLoading(true);
         setError('');
         try {
-            const response = await fetch('http://127.0.0.1:5000/startSession', { method: 'POST' });
+            // CHANGED: Use relative path for Vite proxy
+            const response = await fetch('/api/startSession', { method: 'POST' });
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             const data = await response.json();
             
@@ -80,7 +81,8 @@ export default function App() {
         setChatHistory(prev => [...prev, userMessage]);
 
         try {
-            const response = await fetch('http://127.0.0.1:5000/sendMessage', {
+            // This fetch call was already correct.
+            const response = await fetch('/api/message', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ sessionId, message }),
@@ -140,7 +142,8 @@ function Dashboard({ classes, onAddClass, onStartAuditor, isLoadingAuditor, audi
     const handleExplainConcept = async (concept) => {
         setExplanation({ concept, text: '', isLoading: true });
         try {
-            const response = await fetch('http://127.0.0.1:5000/explainConcept', {
+            // CHANGED: Use relative path for Vite proxy
+            const response = await fetch('/api/explainConcept', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ concept }),
             });
             if (!response.ok) throw new Error('Failed to fetch explanation.');
@@ -214,7 +217,8 @@ function AddClassModal({ onClose, onAddClass }) {
         formData.append('syllabus', syllabus);
 
         try {
-            const response = await fetch('http://127.0.0.1:5000/addClass', { method: 'POST', body: formData });
+            // CHANGED: Use relative path for Vite proxy
+            const response = await fetch('/api/addClass', { method: 'POST', body: formData });
             if (!response.ok) throw new Error(`Server error: ${await response.text()}`);
             const result = await response.json();
             onAddClass({ name: result.className, id: result.classId, concepts: result.concepts });

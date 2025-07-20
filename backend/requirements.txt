@@ -1,0 +1,12 @@
+# Python dependencies for the Altera Labs backend.
+# Use 'pip install -r requirements.txt' to install.
+
+flask
+flask-cors
+python-dotenv
+requests
+PyMuPDF
+pexpect
+tqdm
+requests_toolbelt
+google-genai

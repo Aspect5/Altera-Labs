@@ -1,23 +1,26 @@
 {
   "name": "Altera Labs Lean Environment",
-  // We're telling it to use a clean, standard Ubuntu image, not the default.
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
   "features": {
-    // We'll add Python to this clean image.
     "ghcr.io/devcontainers/features/python:1": {
       "version": "3.10"
     },
-    // And Node.js for the frontend.
     "ghcr.io/devcontainers/features/node:1": {
       "version": "20"
     }
   },
-  // This command will run automatically AFTER the container is created.
-  "postCreateCommand": ".devcontainer/post-create.sh",
+  "postCreateCommand": "sh .devcontainer/post-create.sh",
 
-  // This makes sure your app's ports are available.
+  // --- FIX: Install the extension using the declarative approach ---
+  // This is the most reliable method and avoids the 'code not found' error.
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "leanprover.lean4"
+      ]
+    }
+  },
+
   "forwardPorts": [5173, 5001],
-
-  // Run commands as the standard 'vscode' user.
   "remoteUser": "vscode"
 }
