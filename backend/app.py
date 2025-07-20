@@ -28,9 +28,10 @@ import fitz  # PyMuPDF library
 
 # --- Local Application Imports ---
 # Import the newly created modules for core logic and prompts.
-from backend import prompts
+from backend import prompts 
 from backend import metacognition
 from backend.socratic_auditor import get_llm_response # LLM utility is now in the auditor module
+from backend.metacognition import MetacognitiveStage
 
 # --- Configuration & Setup ---
 load_dotenv()
@@ -78,28 +79,35 @@ def health_check():
 def start_session():
     """
     Starts a new proof-auditing session for a user.
-    Initializes the session state, including the metacognitive loop.
+    Initializes the session state with a placeholder for the full student model.
     """
     session_id = str(uuid.uuid4())
     initial_proof = "import Mathlib.Data.Real.Basic\n\nexample (a b : ℝ) : a * b = b * a := by\n  sorry"
     
     with STATE_LOCK:
-        # Create the session object.
+        # This session object is now the placeholder for the full "Student Model"
         SESSIONS[session_id] = {
             "session_id": session_id,
-            "proof_code": initial_proof,
-            # The metacognitive stage will be set by the initialization function.
+            "metacognitive_stage": MetacognitiveStage.PLANNING_GOAL,
+            
+            # --- NEW: Placeholder for the Dynamic Student Knowledge Graph ---
+            "student_model": {
+                "affective_state": "NEUTRAL",  # e.g., NEUTRAL, CONFUSED, FRUSTRATED
+                "knowledge_components": {},   # Will store BKT probabilities for skills
+                "current_proof": initial_proof,
+                "error_history": []
+            }
         }
-        # Initialize the metacognitive loop for the new session.
-        initial_response = metacognition.initialize_session(SESSIONS[session_id])
+        # This function should now just initialize the stage
+        metacognition.initialize_session_stage(SESSIONS[session_id])
 
     app.logger.info(f"New session started: {session_id}")
     
-    # The initial response now comes from the metacognition module.
+    # The response remains largely the same for now
     return jsonify({
         "sessionId": session_id,
-        "proof_code": initial_response['proof_code'],
-        "ai_response_text": initial_response['ai_response_text']
+        "proof_code": SESSIONS[session_id]['student_model']['current_proof'],
+        "ai_response_text": prompts.PLANNING_PROMPT_INITIAL
     })
 
 @app.route('/api/message', methods=['POST'])
@@ -111,38 +119,44 @@ def handle_message():
     to the `metacognition.process_message` function, which orchestrates the
     Plan-Monitor-Reflect cycle and the Socratic Auditor.
     """
-    data = request.get_json()
-    if not data or 'sessionId' not in data or 'message' not in data:
-        return jsonify({"error": "Missing sessionId or message"}), 400
-    
-    session_id, user_message = data['sessionId'], data['message']
-    
-    with STATE_LOCK:
-        if session_id not in SESSIONS:
-            return jsonify({"error": "Invalid session ID"}), 404
-        # Get a mutable reference to the current session.
-        session = SESSIONS[session_id]
-
+    # Define session_id outside the try block with a default value for the logger
+    session_id = "unknown" 
     try:
+        # --- FIX: Move all logic inside the try block ---
+        data = request.get_json()
+        if not data or 'sessionId' not in data or 'message' not in data:
+            return jsonify({"error": "Missing sessionId or message"}), 400
+        
+        # Now, all variables are defined within the scope of the try block
+        session_id, user_message = data['sessionId'], data['message']
+        
+        with STATE_LOCK:
+            if session_id not in SESSIONS:
+                return jsonify({"error": "Invalid session ID"}), 404
+            # Get a mutable reference to the current session.
+            session = SESSIONS[session_id]
+
         # --- DELEGATION OF LOGIC ---
-        # All complex logic is now handled by the metacognition module.
         result = metacognition.process_message(session, user_message)
         
-        # The session object may have been modified by the metacognition module
-        # (e.g., stage change, proof code update), so we update the global state.
+        # Persist the (potentially modified) session state
         with STATE_LOCK:
             SESSIONS[session_id] = session
-            
+
+        # --- CORRECTED RESPONSE ---
+        # The proof code now lives inside the student_model.
         return jsonify({
             "ai_response_text": result['ai_response_text'],
-            "proof_code": result['new_proof_code'],
-            "is_verified": result['is_verified']
+            "proof_code": session['student_model']['current_proof'],
+            "is_verified": result.get('is_verified')
         })
 
     except Exception as e:
+        # Now the logger can safely use session_id even if parsing failed
+        import traceback
         app.logger.error(f"Critical error in handle_message for session {session_id}: {e}")
+        app.logger.error(traceback.format_exc())
         return jsonify({"error": "An internal server error occurred."}), 500
-
 
 @app.route('/api/addClass', methods=['POST'])
 def add_class():

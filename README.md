@@ -75,7 +75,7 @@ This method automates the installation of Python, Node.js, the Lean 4 toolchain,
     **Terminal 1: Start the Backend Server**
     ```bash
     # This command is run from the root of the workspace
-    python backend/app.py
+    python -m backend.app
     ```
 
     **Terminal 2: Start the Frontend Server**
