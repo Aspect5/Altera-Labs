@@ -27,6 +27,7 @@ instance/
 .coverage
 
 # Node.js / Frontend related ignores
+node_modules
 /frontend/node_modules/
 /frontend/dist/
 /frontend/.pnpm-debug.log*
