@@ -1,47 +1,40 @@
 #!/bin/sh
 
-# This script will exit immediately if any command fails.
+# Exit immediately if any command fails
 set -e
 
 echo "--- Installing elan (Lean's toolchain manager) ---"
-# Install elan and add it to the path for the current script execution
 curl https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -sSf | sh -s -- -y
 . /home/vscode/.elan/env
 
-# --- FIX: Make the elan environment permanent for all future terminals ---
 echo "--- Configuring .bashrc to make elan environment permanent ---"
-echo '' >> /home/vscode/.bashrc
-echo '# Add Lean/Elan to the PATH' >> /home/vscode/.bashrc
-echo '. /home/vscode/.elan/env' >> /home/vscode/.bashrc
-echo '' >> /home/vscode/.bashrc
+if ! grep -q ". /home/vscode/.elan/env" /home/vscode/.bashrc; then
+  echo -e "\n# Add Lean/Elan to the PATH\n. /home/vscode/.elan/env\n" >> /home/vscode/.bashrc
+fi
 
-echo "--- Setting up Lean project in backend/lean_verifier ---"
-# Create the directory structure
-mkdir -p /workspaces/Altera-Labs/backend/lean_verifier
-cd /workspaces/Altera-Labs/backend/lean_verifier
+LEAN_PROJECT_DIR="/workspaces/Altera-Labs/backend/lean_verifier"
+WORKSPACE_ROOT="/workspaces/Altera-Labs"
 
-# Create the configuration files directly
-echo "leanprover/lean4:v4.8.0-rc1" > lean-toolchain
+if [ ! -f "$LEAN_PROJECT_DIR/lakefile.toml" ]; then
+    echo "--- Lean project not found. Initializing a new one... ---"
+    cd "$WORKSPACE_ROOT/backend"
+    lake new lean_verifier math
+else
+    echo "--- Lean project found. Using existing setup. ---"
+fi
 
-echo '[package]
-name = "lean_verifier"
-version = "0.1.0"
-
-[dependencies]
-mathlib = {git = "https://github.com/leanprover-community/mathlib4"}' > lakefile.toml
-
-# Create a dummy root file for the project to be valid
-touch LeanVerifier.lean
-
-echo "--- Building Lean project and fetching mathlib (this will take several minutes) ---"
+cd "$LEAN_PROJECT_DIR"
+echo "--- Building Lean project (will be fast if dependencies are cached)... ---"
 lake build
 
 echo "--- Setting up frontend dependencies ---"
-cd /workspaces/Altera-Labs/frontend
+cd "$WORKSPACE_ROOT/frontend"
 npm install
 
-# --- BEST PRACTICE: Install Python packages from a requirements file ---
-echo "--- Setting up backend Python dependencies from requirements.txt ---"
-pip install -r /workspaces/Altera-Labs/backend/requirements.txt
+echo "--- Returning to workspace root ---"
+cd "$WORKSPACE_ROOT"
+
+echo "--- Setting up backend Python dependencies ---"
+pip install -r backend/requirements.txt
 
 echo "--- ✅✅✅ Dev Container setup complete! ✅✅✅ ---"
