@@ -1,166 +1,168 @@
 # backend/socratic_auditor.py
 
 """
-This module implements the core logic for the "Socratic Verifier" loop,
-as outlined in the Altera Labs strategic research documents. It is responsible for:
-1.  Translating a user's natural language input into a Lean 4 tactic.
-2.  Running the Lean 4 compiler to verify the tactic's logical soundness.
-3.  Translating cryptic compiler errors into pedagogical, Socratic hints.
-
-This architecture is a direct implementation of the "Hybrid Socratic Auditor"
-strategy, separating the probabilistic task of tactic generation from the
-deterministic task of formal verification.
+This module serves as the primary interface to the AI model and the Lean 4
+formal verifier. It is the "Socratic Auditor" responsible for translating
+natural language, verifying tactics, and generating AI-driven pedagogical feedback.
 """
-
 import os
+import subprocess
 import json
 import logging
-import subprocess
 from pathlib import Path
-from typing import Dict, Any, Tuple, Optional
+from typing import Tuple
 
-# In a fully refactored app, these would be in separate modules.
-# For now, we keep the necessary components here.
+# --- AI Model Imports ---
 from google import genai
 from google.genai import types as genai_types
-from backend import prompts
 
-# --- AI Model Configuration ---
-# This setup is simplified for this module. A real application would have a
-# centralized client management system.
+# --- Local Imports (Fallback) ---
+try:
+    from backend import local_llm_stub
+except ImportError:
+    import local_llm_stub
+
+# --- AI Model and Configuration ---
+# This logic is moved from app.py to here.
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 GEMINI_CLIENT = None
-if os.getenv('GEMINI_API_KEY'):
-    GEMINI_CLIENT = genai.Client(api_key=os.getenv('GEMINI_API_KEY'))
-STABLE_MODEL_NAME = 'gemini-2.5-flash'
+STABLE_MODEL_NAME = 'gemini-1.5-flash'
 
-
-def get_llm_response(prompt: str, is_json: bool = False) -> str:
-    """Gets a response from a Gemini model."""
-    if not GEMINI_CLIENT:
-        logging.warning("GEMINI_CLIENT not initialized. Falling back to stub.")
-        # This assumes a local_llm_stub.py exists at the same level
-        from backend import local_llm_stub
-        return local_llm_stub.generate_response(prompt, is_json_output=is_json)
-    
-    config_args = {}
-    if is_json:
-        config_args["response_mime_type"] = "application/json"
-    config = genai_types.GenerateContentConfig(**config_args)
-
-    response = GEMINI_CLIENT.models.generate_content(
-        model=STABLE_MODEL_NAME,
-        contents=prompt,
-        config=config
-    )
-    return response.text
+if GEMINI_API_KEY:
+    try:
+        GEMINI_CLIENT = genai.Client(api_key=GEMINI_API_KEY)
+        logging.info("Successfully initialized Gemini client in socratic_auditor.")
+    except Exception as e:
+        logging.critical(f"FATAL: Failed to initialize Gemini client in socratic_auditor: {e}")
+else:
+    logging.warning("WARNING: GEMINI_API_KEY not found. AI features will use local stub.")
 
 # --- Constants ---
-# This path is relative to the current file's location.
-LEAN_PROJECT_PATH = Path(__file__).parent / 'lean_verifier'
 LAKE_EXECUTABLE_PATH = os.getenv('LAKE_EXECUTABLE_PATH', 'lake')
+BACKEND_DIR = Path(__file__).parent
+LEAN_PROJECT_PATH = BACKEND_DIR / 'lean_verifier'
+LEAN_MAIN_FILE = LEAN_PROJECT_PATH / 'Main.lean'
 
-# A dedicated directory for temporary proof files to ensure session isolation.
-TEMP_PROOFS_DIR = LEAN_PROJECT_PATH / 'TempProofs'
-TEMP_PROOFS_DIR.mkdir(exist_ok=True)
+# --- Core Functions ---
 
-
-def _run_lean_build(session_id: str, proof_code: str) -> Tuple[bool, str]:
+def get_llm_response(prompt: str, is_json: bool = False) -> str:
     """
-    Runs the Lean compiler on a temporary file for a specific session.
+    Gets a response from a Gemini model. This is the single point of contact
+    for all AI interactions in the application.
     """
-    temp_proof_file = TEMP_PROOFS_DIR / f"{session_id}.lean"
-    
+    if not GEMINI_CLIENT:
+        logging.warning(f"Gemini client not available. Falling back to local stub for prompt: {prompt[:100]}...")
+        return local_llm_stub.generate_response(prompt, is_json_output=is_json)
     try:
-        temp_proof_file.write_text(proof_code, encoding='utf-8')
-        process = subprocess.run(
-            [LAKE_EXECUTABLE_PATH, 'build', 'LeanVerifier'],
-            cwd=LEAN_PROJECT_PATH,
-            capture_output=True,
-            text=True,
-            timeout=45,
-            check=False
+        safety_settings = [
+            genai_types.SafetySetting(category='HARM_CATEGORY_HARASSMENT', threshold='BLOCK_NONE'),
+            genai_types.SafetySetting(category='HARM_CATEGORY_HATE_SPEECH', threshold='BLOCK_NONE'),
+            genai_types.SafetySetting(category='HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold='BLOCK_NONE'),
+            genai_types.SafetySetting(category='HARM_CATEGORY_DANGEROUS_CONTENT', threshold='BLOCK_NONE'),
+        ]
+        
+        config_args = {"safety_settings": safety_settings}
+        if is_json:
+            config_args["response_mime_type"] = "application/json"
+
+        config = genai_types.GenerateContentConfig(**config_args)
+
+        response = GEMINI_CLIENT.models.generate_content(
+            model=STABLE_MODEL_NAME,
+            contents=prompt,
+            config=config
         )
-
-        if process.returncode == 0:
-            return True, "Tactic verified successfully!"
+        
+        if response and response.prompt_feedback and response.prompt_feedback.block_reason:
+            raise ValueError(f"Prompt was blocked: {response.prompt_feedback.block_reason.name}")
+        
+        if response and response.text:
+            return response.text
         else:
-            return False, process.stderr or "An unknown build error occurred."
+            raise ValueError("Received an empty response from the API.")
 
-    except subprocess.TimeoutExpired:
-        logging.error(f"Lean build timed out for session {session_id}")
-        return False, "Verification timed out. The tactic may be too complex or contain an error."
     except Exception as e:
-        logging.error(f"An unexpected error occurred during Lean build for session {session_id}: {e}")
-        return False, "A server error occurred during verification."
-    finally:
-        if temp_proof_file.exists():
-            temp_proof_file.unlink()
+        logging.error(f"Gemini API call failed: {e}. Falling back to local stub.")
+        return local_llm_stub.generate_response(prompt, is_json_output=is_json)
 
-
-def _generate_tactic(proof_state: str, user_message: str) -> Optional[str]:
+def verify_step(session_id: str, proof_code: str, user_message: str) -> dict:
     """
-    Uses the LLM to translate a user's message into a Lean 4 tactic.
+    Orchestrates the verification of a single user step.
+    1. Tries to generate a tactic from the user message.
+    2. If successful, runs the tactic against the Lean verifier.
+    3. If the verifier fails, uses the AI to generate a Socratic hint.
     """
-    prompt = prompts.TACTIC_GENERATION_PROMPT.format(proof_state=proof_state, user_message=user_message)
-    try:
-        response_str = get_llm_response(prompt, is_json=True)
-        tactic_data = json.loads(response_str)
-        return tactic_data.get("tactic")
-    except (json.JSONDecodeError, KeyError) as e:
-        logging.error(f"Failed to parse tactic from LLM response: {e}")
-        return None
-
-
-def _generate_socratic_hint(proof_state: str, tactic: str, error_message: str) -> str:
-    """
-    Uses the LLM to translate a technical Lean error into a pedagogical hint.
-    """
-    prompt = prompts.SOCRATIC_HINT_PROMPT.format(
-        proof_state=proof_state,
-        tactic=tactic,
-        error_message=error_message
-    )
-    return get_llm_response(prompt)
-
-
-def verify_step(session_id: str, proof_code: str, user_message: str) -> Dict[str, Any]:
-    """
-    The main public function for the Socratic Auditor.
-    """
-    logging.info(f"Verifying step for session {session_id}: '{user_message}'")
+    # This function now correctly returns a dictionary
+    tactic_prompt = f"""
+    Translate the user's natural language statement into a single, valid Lean 4 tactic.
+    Current Proof State:
+    ```lean
+    {proof_code}
+    ```
+    User's statement: "{user_message}"
     
-    lean_tactic = _generate_tactic(proof_code, user_message)
+    Respond with valid JSON containing a single key "tactic". If no tactic can be generated, the value should be null.
+    """
+    try:
+        tactic_response_str = get_llm_response(tactic_prompt, is_json=True)
+        tactic_data = json.loads(tactic_response_str)
+        lean_tactic = tactic_data.get("tactic")
+    except (json.JSONDecodeError, ValueError) as e:
+        logging.error(f"Failed to generate or parse tactic from LLM: {e}")
+        lean_tactic = None
 
     if not lean_tactic:
-        logging.warning(f"Could not generate a tactic for: '{user_message}'")
-        return {
-            "is_verified": None,
-            "ai_response_text": "I'm not sure how to turn that into a formal proof step. Could you try rephrasing it as a command or tactic?",
-            "new_proof_code": proof_code
-        }
+        return {"new_proof_code": proof_code, "ai_response_text": "", "is_verified": None}
 
-    if 'sorry' not in proof_code:
-         return {
-            "is_verified": False,
-            "ai_response_text": "The proof is already complete!",
-            "new_proof_code": proof_code
-        }
-    
-    proof_attempt_code = proof_code.replace('sorry', f'{lean_tactic}\n  sorry', 1)
-    
-    is_verified, result_msg = _run_lean_build(session_id, proof_attempt_code)
-    
-    if is_verified:
-        final_proof_code = proof_attempt_code.replace('\n  sorry', '')
-        return {
-            "is_verified": True,
-            "ai_response_text": result_msg,
-            "new_proof_code": final_proof_code
-        }
+    is_success, verifier_output = run_lean_compiler(proof_code, lean_tactic)
+
+    if is_success:
+        new_proof_code = verifier_output
+        return {"new_proof_code": new_proof_code, "ai_response_text": "Tactic verified successfully!", "is_verified": True}
     else:
-        socratic_hint = _generate_socratic_hint(proof_code, lean_tactic, result_msg)
-        return {
-            "is_verified": False,
-            "ai_response_text": socratic_hint,
-            "new_proof_code": proof_code
-        }
+        # Generate a Socratic hint from the error
+        socratic_prompt = f"""
+        A student's Lean 4 tactic failed. Be a helpful Socratic tutor. Explain the error conceptually and ask a guiding question.
+        Current Proof State:
+        ```lean
+        {proof_code}
+        ```
+        Student's failed tactic: `{lean_tactic}`
+        Compiler Error:
+        ```
+        {verifier_output}
+        ```
+        Your Socratic hint (do not give the code answer):
+        """
+        hint = get_llm_response(socratic_prompt)
+        return {"new_proof_code": proof_code, "ai_response_text": hint, "is_verified": False}
+
+
+def run_lean_compiler(current_proof: str, tactic: str) -> Tuple[bool, str]:
+    """
+    Runs the Lean compiler with the new tactic and returns (success, output).
+    Output is the new proof state on success, or the error message on failure.
+    """
+    if 'sorry' not in current_proof:
+        return False, "Proof is already complete."
+        
+    # Inject the new tactic
+    new_proof_code_with_tactic = current_proof.replace('sorry', f'{tactic}\n  sorry', 1)
+
+    try:
+        LEAN_MAIN_FILE.write_text(new_proof_code_with_tactic, encoding='utf-8')
+        
+        process = subprocess.run(
+            [LAKE_EXECUTABLE_PATH, 'build'], cwd=LEAN_PROJECT_PATH,
+            capture_output=True, text=True, timeout=30, check=False
+        )
+        
+        if process.returncode == 0:
+            final_proof_code = new_proof_code_with_tactic.replace('\n  sorry', '')
+            return True, final_proof_code
+        else:
+            return False, process.stderr
+            
+    except Exception as e:
+        logging.error(f"Error running Lean compiler: {e}")
+        return False, "An unexpected server error occurred during verification."
