@@ -10,3 +10,4 @@ pexpect
 tqdm
 requests_toolbelt
 google-genai
+google-cloud-aiplatform

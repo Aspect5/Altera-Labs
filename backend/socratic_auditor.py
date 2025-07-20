@@ -12,9 +12,9 @@ import logging
 from pathlib import Path
 from typing import Tuple
 
-# --- AI Model Imports ---
-from google import genai
-from google.genai import types as genai_types
+# --- AI Model Imports (Corrected for Vertex AI) ---
+import vertexai
+from vertexai.generative_models import GenerativeModel, Part, HarmCategory, HarmBlockThreshold
 
 # --- Local Imports (Fallback) ---
 try:
@@ -23,19 +23,17 @@ except ImportError:
     import local_llm_stub
 
 # --- AI Model and Configuration ---
-# This logic is moved from app.py to here.
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
-GEMINI_CLIENT = None
-STABLE_MODEL_NAME = 'gemini-1.5-flash'
+# This logic is now updated for the Vertex AI SDK
+PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT")
+LOCATION = os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
+STABLE_MODEL_NAME = 'gemini-2.5-pro' # The model you want to use
 
-if GEMINI_API_KEY:
-    try:
-        GEMINI_CLIENT = genai.Client(api_key=GEMINI_API_KEY)
-        logging.info("Successfully initialized Gemini client in socratic_auditor.")
-    except Exception as e:
-        logging.critical(f"FATAL: Failed to initialize Gemini client in socratic_auditor: {e}")
-else:
-    logging.warning("WARNING: GEMINI_API_KEY not found. AI features will use local stub.")
+try:
+    vertexai.init(project=PROJECT_ID, location=LOCATION)
+    logging.info("Successfully initialized Vertex AI client in socratic_auditor.")
+    # Model object is now created on-demand in get_llm_response
+except Exception as e:
+    logging.critical(f"FATAL: Failed to initialize Vertex AI client: {e}")
 
 # --- Constants ---
 LAKE_EXECUTABLE_PATH = os.getenv('LAKE_EXECUTABLE_PATH', 'lake')
@@ -47,43 +45,42 @@ LEAN_MAIN_FILE = LEAN_PROJECT_PATH / 'Main.lean'
 
 def get_llm_response(prompt: str, is_json: bool = False) -> str:
     """
-    Gets a response from a Gemini model. This is the single point of contact
-    for all AI interactions in the application.
+    Gets a response from a Gemini model via the Vertex AI SDK.
     """
-    if not GEMINI_CLIENT:
-        logging.warning(f"Gemini client not available. Falling back to local stub for prompt: {prompt[:100]}...")
-        return local_llm_stub.generate_response(prompt, is_json_output=is_json)
     try:
-        safety_settings = [
-            genai_types.SafetySetting(category='HARM_CATEGORY_HARASSMENT', threshold='BLOCK_NONE'),
-            genai_types.SafetySetting(category='HARM_CATEGORY_HATE_SPEECH', threshold='BLOCK_NONE'),
-            genai_types.SafetySetting(category='HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold='BLOCK_NONE'),
-            genai_types.SafetySetting(category='HARM_CATEGORY_DANGEROUS_CONTENT', threshold='BLOCK_NONE'),
-        ]
+        model = GenerativeModel(STABLE_MODEL_NAME)
         
-        config_args = {"safety_settings": safety_settings}
+        # Vertex AI uses a different safety setting format
+        safety_settings = {
+            HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+            HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+            HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+            HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+        }
+        
+        # And a different response mime type format
+        generation_config = {}
         if is_json:
-            config_args["response_mime_type"] = "application/json"
-
-        config = genai_types.GenerateContentConfig(**config_args)
-
-        response = GEMINI_CLIENT.models.generate_content(
-            model=STABLE_MODEL_NAME,
-            contents=prompt,
-            config=config
+            generation_config["response_mime_type"] = "application/json"
+        
+        response = model.generate_content(
+            [prompt],
+            generation_config=generation_config,
+            safety_settings=safety_settings
         )
         
-        if response and response.prompt_feedback and response.prompt_feedback.block_reason:
-            raise ValueError(f"Prompt was blocked: {response.prompt_feedback.block_reason.name}")
-        
+        if response and response.candidates and response.candidates[0].finish_reason.name == "SAFETY":
+             raise ValueError("Response was blocked by safety settings.")
+
         if response and response.text:
             return response.text
         else:
             raise ValueError("Received an empty response from the API.")
 
     except Exception as e:
-        logging.error(f"Gemini API call failed: {e}. Falling back to local stub.")
+        logging.error(f"Vertex AI API call failed: {e}. Falling back to local stub.")
         return local_llm_stub.generate_response(prompt, is_json_output=is_json)
+
 
 def verify_step(session_id: str, proof_code: str, user_message: str) -> dict:
     """
