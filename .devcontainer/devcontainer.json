@@ -7,12 +7,13 @@
     },
     "ghcr.io/devcontainers/features/node:1": {
       "version": "20"
+    },
+    "ghcr.io/devcontainers/features/git:1": {
+      "version": "latest"
     }
   },
   "postCreateCommand": "sh .devcontainer/post-create.sh",
 
-  // --- FIX: Install the extension using the declarative approach ---
-  // This is the most reliable method and avoids the 'code not found' error.
   "customizations": {
     "vscode": {
       "extensions": [
