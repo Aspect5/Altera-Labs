@@ -12,6 +12,13 @@
       "version": "latest"
     }
   },
+
+  // --- FINAL FIX: Use the exact variable names the Python script expects ---
+  "containerEnv": {
+    "VERTEX_AI_PROJECT_ID": "altera-labs",
+    "VERTEX_AI_LOCATION": "us-east1"
+  },
+
   "postCreateCommand": "sh .devcontainer/post-create.sh",
 
   "customizations": {
@@ -22,6 +29,6 @@
     }
   },
 
-  "forwardPorts": [5173, 5001],
+  "forwardPorts": [5173, 5000],
   "remoteUser": "vscode"
 }
