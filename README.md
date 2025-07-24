@@ -90,3 +90,22 @@ Our development is guided by a phased plan to progressively build out the AI Cog
 * *Future:* **Phase 3: Advanced AI & Personalization**  
   * AI-driven "pre-work" where the tutor solves homework to provide better guidance.  
   * Affective computing to detect and respond to student frustration.
+
+  ## Current Project Status (July 2025)
+
+Development has progressed through the first two phases, and the initial work for Phase 3 has begun.
+
+### Implemented Features:
+-   **Syllabus to Knowledge Graph:** Users can upload a syllabus (`.pdf` or `.txt`) to generate a D3.js-visualized knowledge graph of course concepts.
+-   **Contextual Inquiry ("Highlight-to-Ask"):** Users can select text within the chat interface to receive a contextual explanation from the AI.
+-   **Bayesian Model Simulation:** A "Developer View" provides a detailed interface for visualizing and interacting with the BKT model's parameters (`mu` and `sigma`).
+-   **Personalized Review Screen:** After a simulated exam, users are presented with an `ExamResults` screen that shows their overall score and a breakdown of mastered vs. unmastered concepts.
+-   **Socratic Verifier (Initial):** The foundational infrastructure for the Lean 4 Socratic Verifier is in place. This includes:
+    -   A mocked `lean_verifier.py` service on the backend.
+    -   A `/api/verify_step` endpoint to handle verification requests.
+    -   A complete frontend loop allowing users to submit proof steps and receive feedback in the chat.
+
+### Known Issues
+-   **TypeScript Prop Mismatch:** There is a known type error in `frontend/App.tsx` related to the props being passed to the `ChatMentor` component. The component's props were recently simplified for the verifier flow, but the parent component has not been fully updated to match. This will be resolved in an upcoming commit.
+
+---

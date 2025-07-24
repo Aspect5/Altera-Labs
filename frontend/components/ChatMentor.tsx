@@ -3,22 +3,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChatMessage } from '../types';
 
+// --- MODIFIED: Simplified props for the Socratic Verifier flow ---
 interface ChatMentorProps {
     history: ChatMessage[];
     isLoading: boolean;
-    onSendMessage: (message: string) => void;
+    onVerifyStep: (step: string) => void;
     onContextualQuery: (selectedText: string, contextText: string) => void;
-    onStartPractice: (nodeId: string) => void;
-    onPracticeAnswer: (nodeId: string, isCorrect: boolean) => void;
-    activePracticeNodeId: string | null;
 }
 
-const ChatMentor: React.FC<ChatMentorProps> = ({ history, isLoading, onSendMessage, onContextualQuery, onStartPractice, onPracticeAnswer, activePracticeNodeId }) => {
+const ChatMentor: React.FC<ChatMentorProps> = ({ history, isLoading, onVerifyStep, onContextualQuery }) => {
     const [input, setInput] = useState('');
     const chatEndRef = useRef<HTMLDivElement>(null);
     const chatContainerRef = useRef<HTMLDivElement>(null);
-    
-    // State to manage the "Explain" pop-up for contextual queries.
     const [selection, setSelection] = useState<{ text: string; x: number; y: number } | null>(null);
 
     // Effect to scroll to the bottom of the chat on new messages.
@@ -26,7 +22,7 @@ const ChatMentor: React.FC<ChatMentorProps> = ({ history, isLoading, onSendMessa
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [history, isLoading]);
 
-    // Effect to handle text selection for the "Highlight-to-Ask" feature.
+    // Effect for "Highlight-to-Ask" feature.
     useEffect(() => {
         const handleMouseUp = () => {
             setTimeout(() => {
@@ -35,7 +31,6 @@ const ChatMentor: React.FC<ChatMentorProps> = ({ history, isLoading, onSendMessa
 
                 if (currentSelection && selectedText && selectedText.length > 5 && selectedText.length < 100) {
                     const range = currentSelection.getRangeAt(0);
-                    // Ensure the selection is within our chat container before showing the popup.
                     if (chatContainerRef.current && chatContainerRef.current.contains(range.commonAncestorContainer)) {
                         const rect = range.getBoundingClientRect();
                         const containerRect = chatContainerRef.current.getBoundingClientRect();
@@ -65,37 +60,21 @@ const ChatMentor: React.FC<ChatMentorProps> = ({ history, isLoading, onSendMessa
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (input.trim() && !isLoading && !activePracticeNodeId) {
-            onSendMessage(input.trim());
+        if (input.trim() && !isLoading) {
+            // --- MODIFIED: Ensure onVerifyStep is called ---
+            onVerifyStep(input.trim());
             setInput('');
         }
     };
     
-    // This is the complete MessageBubble component from your original file.
+    // --- MODIFIED: MessageBubble now renders verification status ---
     const MessageBubble: React.FC<{ msg: ChatMessage }> = ({ msg }) => {
         const isModel = msg.role === 'model';
-        const isSystem = msg.role === 'system';
+        const hasVerification = !!msg.verification;
 
-        if (isSystem && msg.practiceNodeId) {
-            // This is the prompt to answer a practice problem
-            return (
-                <div className="bg-slate-700/50 p-3 my-2 rounded-lg text-center">
-                    <p className="text-slate-300 text-sm italic mb-3">{msg.content}</p>
-                    <div className="grid grid-cols-2 gap-3">
-                        <button
-                            onClick={() => onPracticeAnswer(msg.practiceNodeId!, true)}
-                            className="w-full bg-emerald-600 text-white font-bold py-2 px-4 rounded-md hover:bg-emerald-500 transition-colors"
-                        >✓ Correct</button>
-                        <button
-                            onClick={() => onPracticeAnswer(msg.practiceNodeId!, false)}
-                            className="w-full bg-red-600 text-white font-bold py-2 px-4 rounded-md hover:bg-red-500 transition-colors"
-                        >✗ Incorrect</button>
-                    </div>
-                </div>
-            )
-        }
-        
-        if (isSystem) {
+        // System messages and practice prompts can remain if needed for other flows,
+        // but the primary addition is handling the verification display.
+        if (msg.role === 'system') {
              return (
                 <div className="text-center my-2">
                     <span className="text-xs text-slate-500 italic px-2 py-1 bg-slate-800 rounded-full">{msg.content}</span>
@@ -107,15 +86,14 @@ const ChatMentor: React.FC<ChatMentorProps> = ({ history, isLoading, onSendMessa
             <div className={`flex ${isModel ? 'justify-start' : 'justify-end'} mb-3`}>
                 <div className={`rounded-lg px-4 py-2 max-w-sm md:max-w-md lg:max-w-lg ${isModel ? 'bg-slate-700 text-slate-200' : 'bg-cyan-600 text-white'}`}>
                     <p style={{whiteSpace: 'pre-wrap'}}>{msg.content}</p>
-                    {msg.suggestion && (
-                        <div className="mt-3 pt-2 border-t border-t-slate-500/50">
-                            <p className="text-xs italic mb-2">{isModel ? 'Suggested Practice:' : ''}</p>
-                             <button 
-                                onClick={() => onStartPractice(msg.suggestion!.nodeId)}
-                                className="w-full bg-slate-600 hover:bg-slate-500 text-white font-semibold py-2 px-3 rounded text-sm text-left transition-colors"
-                            >
-                                Practice: {msg.suggestion.label}
-                            </button>
+                    
+                    {/* --- NEW: Display for verification results --- */}
+                    {hasVerification && (
+                        <div className={`mt-3 pt-2 border-t text-sm font-semibold flex items-center gap-2 ${
+                            msg.verification?.isComplete ? 'border-green-400/50 text-green-400' : 
+                            msg.verification?.verified ? 'border-blue-400/50 text-blue-400' : 'border-red-400/50 text-red-400'
+                        }`}>
+                            {msg.verification?.isComplete ? '✅ Proof Complete' : msg.verification?.verified ? '✔️ Step Verified' : '❌ Step Failed'}
                         </div>
                     )}
                 </div>
@@ -149,7 +127,7 @@ const ChatMentor: React.FC<ChatMentorProps> = ({ history, isLoading, onSendMessa
                             onClick={handleExplainClick}
                             className="text-white text-xs font-bold px-3 py-1 hover:bg-blue-500 rounded-md transition-colors"
                         >
-                            Explain This
+                            Explain
                         </button>
                     </div>
                 )}
@@ -162,11 +140,12 @@ const ChatMentor: React.FC<ChatMentorProps> = ({ history, isLoading, onSendMessa
                         type="text"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        placeholder={activePracticeNodeId ? "Please answer the practice question." : "Ask the mentor a question..."}
-                        disabled={isLoading || !!activePracticeNodeId}
+                        // --- MODIFIED: Placeholder text updated ---
+                        placeholder={"Enter your proof step here..."}
+                        disabled={isLoading}
                         className="flex-grow bg-slate-900 border border-slate-600 rounded-lg py-2 px-4 focus:ring-2 focus:ring-cyan-500 focus:outline-none disabled:cursor-not-allowed"
                     />
-                    <button type="submit" disabled={isLoading || !!activePracticeNodeId} className="bg-cyan-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-cyan-500 disabled:bg-slate-600 disabled:cursor-not-allowed transition-colors">
+                    <button type="submit" disabled={isLoading} className="bg-cyan-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-cyan-500 disabled:bg-slate-600 disabled:cursor-not-allowed transition-colors">
                         Send
                     </button>
                 </form>

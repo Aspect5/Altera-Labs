@@ -1,24 +1,35 @@
 // frontend/types.ts
 
 export interface GraphNode {
-  id: string;
-  label: string;
+    id: string;
+    label: string;
+    type: 'concept' | 'skill' | 'competency';
 }
 
-// FIXED: This is the correct shape for an Edge based on your components.
 export interface Edge {
-  source: string;
-  target: string;
-  weight: number;
+    id: string;
+    source: string;
+    target: string;
+    label: 'is_prerequisite_for' | 'is_related_to';
 }
 
 export interface KnowledgeState {
-  [nodeId: string]: {
-    mu: number; // Mastery estimate (mean)
-    sigma: number; // Uncertainty (standard deviation)
-  };
+    [nodeId: string]: {
+        mu: number;      // Mean (belief of mastery)
+        sigma: number;   // Standard deviation (uncertainty)
+    };
 }
 
+// --- NEW: For the Socratic Verifier ---
+export interface VerificationResult {
+    verified: boolean;
+    is_complete: boolean;
+    feedback: string;
+    new_proof_state: string;
+    error: string | null;
+}
+
+// --- CORRECTED: The existing ChatMessage interface, now updated ---
 export interface ChatMessage {
   role: 'user' | 'model' | 'system';
   content: string;
@@ -27,20 +38,9 @@ export interface ChatMessage {
     label: string;
   };
   practiceNodeId?: string;
-}
-
-// D3 types for the simulation
-export interface D3Node extends GraphNode {
-    x?: number;
-    y?: number;
-    vx?: number;
-    vy?: number;
-    mu: number;
-    sigma: number;
-}
-
-export interface D3Link {
-    source: string | D3Node;
-    target: string | D3Node;
-    weight: number;
+  // --- NEW: Optional field for verification results ---
+  verification?: {
+      verified: boolean;
+      isComplete: boolean;
+  };
 }
