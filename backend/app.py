@@ -16,6 +16,7 @@ from backend import prompts
 from backend import metacognition
 from backend import rag_manager
 from backend.socratic_auditor import get_llm_response
+from backend.lean_verifier import lean_verifier_instance # --- NEW IMPORT ---
 
 load_dotenv()
 
@@ -89,7 +90,7 @@ def explain_concept():
         return jsonify({"error": "No active session."}), 401
     data = request.get_json()
     concept = data.get('concept')
-    context = data.get('context', '') 
+    context = data.get('context', '')
     try:
         prompt = prompts.CONCEPT_EXPLANATION_PROMPT.format(concept=concept, context=context)
         explanation = get_llm_response(prompt)
@@ -100,32 +101,45 @@ def explain_concept():
 
 @app.route('/api/finalize_exam', methods=['POST'])
 def finalize_exam():
-    """
-    --- NEW ENDPOINT ---
-    Finalizes an exam session, calculates the results, and returns them.
-    """
-    if 'user_id' not in session or 'student_model' not in session:
+    if 'user_id' not in session:
         return jsonify({"error": "No active session to finalize."}), 401
-    
+    data = request.get_json()
+    if not data or 'knowledgeState' not in data:
+        return jsonify({"error": "Request must be JSON with a 'knowledgeState' field."}), 400
+    final_knowledge_state = data['knowledgeState']
     try:
-        # In a real scenario, you would perform scoring logic here.
-        # For now, we'll just return the final knowledge state.
-        final_knowledge_state = session['student_model'].get('knowledge_components', {})
-        
-        # This is where you could calculate an overall score or generate high-level feedback.
-        # For example:
-        # score = calculate_overall_score(final_knowledge_state)
-        
         app.logger.info(f"Finalizing exam for user {session['user_id']}.")
-        
         return jsonify({
             "message": "Exam finalized successfully.",
             "finalKnowledgeState": final_knowledge_state
         })
-
     except Exception as e:
         app.logger.error(f"Error finalizing exam for user {session['user_id']}: {e}", exc_info=True)
         return jsonify({"error": "An internal server error occurred while finalizing the exam."}), 500
+
+@app.route('/api/verify_step', methods=['POST'])
+def verify_step():
+    """
+    --- NEW ENDPOINT ---
+    Receives a natural language proof step and uses the Lean Verifier
+    service to check it.
+    """
+    data = request.get_json()
+    if not data or 'proof_state' not in data or 'step' not in data:
+        return jsonify({"error": "Request must include 'proof_state' and 'step'."}), 400
+    
+    current_proof_state = data['proof_state']
+    natural_language_step = data['step']
+    
+    try:
+        # Delegate the core logic to our new verifier service
+        result = lean_verifier_instance.verify_step(current_proof_state, natural_language_step)
+        return jsonify(result)
+        
+    except Exception as e:
+        app.logger.error(f"Error during proof verification: {e}", exc_info=True)
+        return jsonify({"error": "An internal server error occurred during verification."}), 500
+
 
 @app.route('/api/upload_assignment', methods=['POST'])
 def upload_assignment():
