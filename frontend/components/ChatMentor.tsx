@@ -1,23 +1,67 @@
+// frontend/components/ChatMentor.tsx
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ChatMessage, PracticeSuggestion } from '../types';
+import { ChatMessage } from '../types';
 
 interface ChatMentorProps {
     history: ChatMessage[];
     isLoading: boolean;
     onSendMessage: (message: string) => void;
+    onContextualQuery: (selectedText: string, contextText: string) => void;
     onStartPractice: (nodeId: string) => void;
     onPracticeAnswer: (nodeId: string, isCorrect: boolean) => void;
     activePracticeNodeId: string | null;
 }
 
-const ChatMentor: React.FC<ChatMentorProps> = ({ history, isLoading, onSendMessage, onStartPractice, onPracticeAnswer, activePracticeNodeId }) => {
+const ChatMentor: React.FC<ChatMentorProps> = ({ history, isLoading, onSendMessage, onContextualQuery, onStartPractice, onPracticeAnswer, activePracticeNodeId }) => {
     const [input, setInput] = useState('');
     const chatEndRef = useRef<HTMLDivElement>(null);
+    const chatContainerRef = useRef<HTMLDivElement>(null);
+    
+    // State to manage the "Explain" pop-up for contextual queries.
+    const [selection, setSelection] = useState<{ text: string; x: number; y: number } | null>(null);
 
+    // Effect to scroll to the bottom of the chat on new messages.
     useEffect(() => {
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [history, isLoading]);
+
+    // Effect to handle text selection for the "Highlight-to-Ask" feature.
+    useEffect(() => {
+        const handleMouseUp = () => {
+            setTimeout(() => {
+                const currentSelection = window.getSelection();
+                const selectedText = currentSelection?.toString().trim();
+
+                if (currentSelection && selectedText && selectedText.length > 5 && selectedText.length < 100) {
+                    const range = currentSelection.getRangeAt(0);
+                    // Ensure the selection is within our chat container before showing the popup.
+                    if (chatContainerRef.current && chatContainerRef.current.contains(range.commonAncestorContainer)) {
+                        const rect = range.getBoundingClientRect();
+                        const containerRect = chatContainerRef.current.getBoundingClientRect();
+                        setSelection({
+                            text: selectedText,
+                            x: rect.left - containerRect.left + rect.width / 2,
+                            y: rect.top - containerRect.top,
+                        });
+                    }
+                } else {
+                    setSelection(null);
+                }
+            }, 10);
+        };
+        
+        document.addEventListener('mouseup', handleMouseUp);
+        return () => document.removeEventListener('mouseup', handleMouseUp);
+    }, []);
+
+    const handleExplainClick = () => {
+        if (selection) {
+            const contextMessage = history.find(msg => msg.content.includes(selection.text))?.content || '';
+            onContextualQuery(selection.text, contextMessage);
+            setSelection(null);
+        }
+    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -26,7 +70,8 @@ const ChatMentor: React.FC<ChatMentorProps> = ({ history, isLoading, onSendMessa
             setInput('');
         }
     };
-
+    
+    // This is the complete MessageBubble component from your original file.
     const MessageBubble: React.FC<{ msg: ChatMessage }> = ({ msg }) => {
         const isModel = msg.role === 'model';
         const isSystem = msg.role === 'system';
@@ -80,8 +125,9 @@ const ChatMentor: React.FC<ChatMentorProps> = ({ history, isLoading, onSendMessa
 
     return (
         <div className="bg-slate-800 rounded-lg shadow-2xl flex flex-col h-full">
-            <div className="flex-grow p-4 overflow-y-auto">
+            <div ref={chatContainerRef} className="flex-grow p-4 overflow-y-auto relative">
                 {history.map((msg, index) => <MessageBubble key={index} msg={msg} />)}
+                
                 {isLoading && (
                     <div className="flex justify-start mb-3">
                         <div className="rounded-lg px-4 py-2 bg-slate-700 text-slate-200">
@@ -93,6 +139,21 @@ const ChatMentor: React.FC<ChatMentorProps> = ({ history, isLoading, onSendMessa
                         </div>
                     </div>
                 )}
+                
+                {selection && (
+                    <div 
+                        className="absolute z-10 p-1 bg-blue-600 rounded-lg shadow-xl"
+                        style={{ left: `${selection.x}px`, top: `${selection.y}px`, transform: 'translate(-50%, -120%)' }}
+                    >
+                        <button
+                            onClick={handleExplainClick}
+                            className="text-white text-xs font-bold px-3 py-1 hover:bg-blue-500 rounded-md transition-colors"
+                        >
+                            Explain This
+                        </button>
+                    </div>
+                )}
+
                 <div ref={chatEndRef}></div>
             </div>
             <div className="p-4 border-t border-slate-700">
