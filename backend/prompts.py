@@ -1,222 +1,199 @@
-# backend/prompts.py
+# backend/app.py
 
 """
-This module centralizes all prompts used to interact with the Large Language Model (LLM).
-Separating prompts from application logic is a best practice that allows for easier
-management, tuning, and maintenance of the AI's behavior.
+This is the main Flask application file for the Altera Labs backend.
 
-The prompts are designed to be modular and are formatted as f-strings to allow for
-dynamic insertion of contextual information like the current proof state or user messages.
+It serves as the web layer, handling API requests and orchestrating the backend
+modules to deliver the AI Cognitive Partner experience. It uses Flask's session
+management to handle individual user states and delegates core logic to other modules.
 """
+
+import os
+import uuid
+import json
+import logging
+from pathlib import Path
+from typing import Dict, Any
+
+# --- Third-party Imports ---
+from dotenv import load_dotenv
+from flask import Flask, request, jsonify, session
+from flask_cors import CORS
+import fitz  # PyMuPDF
+
+# --- Local Application Imports ---
+from backend import prompts
+from backend import metacognition
+from backend import rag_manager
+from backend.socratic_auditor import get_llm_response
+
+# --- Configuration & Setup ---
+load_dotenv()
+
+app = Flask(__name__)
+app.logger.setLevel(logging.INFO)
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-secret-key-replace-in-prod")
+CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
+
+CLASSES: Dict[str, Dict[str, Any]] = {}
+
+# --- Utility Functions ---
+def extract_text_from_pdf(file_stream) -> str:
+    try:
+        with fitz.open(stream=file_stream.read(), filetype="pdf") as doc:
+            return "".join(page.get_text() for page in doc)
+    except Exception as e:
+        app.logger.error(f"PyMuPDF failed to extract text: {e}")
+        raise
 
 # ======================================================================================
-# == PROMPTS FOR THE SOCRATIC AUDITOR (Verification Loop)
+# == API Endpoints
 # ======================================================================================
 
-INTENT_PROMPT = """
-Analyze the user's message in the context of a formal proof session in Lean 4.
-Your primary goal is to determine the user's specific intent. Classify the intent
-into one of the following categories:
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    """A simple endpoint to confirm the server is running."""
+    return jsonify({"status": "ok", "message": "Altera Labs backend is running."})
 
-- "PROOF_STEP": The user is proposing a direct, formal Lean tactic.
-  (e.g., "rw [mul_comm]", "apply mul_comm", "exact h", "intro h").
-- "CONCEPTUAL_STEP": The user is describing a logical step in natural language.
-  (e.g., "use the commutativity of multiplication", "we know a * b = b * a", "by definition of even numbers").
-- "QUESTION": The user is asking for a definition, a hint, or about the state of the proof.
-  (e.g., "what does 'ℝ' mean?", "what should I do next?", "can you explain that error?").
-- "META_COMMENT": The user is making a general comment that is not directly related to the proof logic.
-  (e.g., "this is hard", "one moment", "test", "that's interesting").
+@app.route('/api/start_session', methods=['POST'])
+def start_session():
+    """Starts a new tutoring session for a user."""
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Invalid request body."}), 400
 
-User Message: "{user_message}"
+    session['mode'] = data.get('mode', 'homework')
+    session['user_id'] = data.get('userId', str(uuid.uuid4()))
+    
+    session['student_model'] = {
+        "metacognitive_stage": metacognition.MetacognitiveStage.PLANNING_GOAL.value,
+        "current_proof_state": "import Mathlib.Data.Real.Basic\n\nexample (a b : ℝ) : a * b = b * a := by\n  sorry",
+        "error_history": [],
+        "affective_state": "NEUTRAL",
+        "knowledge_components": {}
+    }
+    session.modified = True
 
-Respond with a single, valid JSON object containing one key, "intent", with the
-classification as its value. For example: {{"intent": "CONCEPTUAL_STEP"}}
-"""
+    app.logger.info(f"New session started for user {session['user_id']} in {session['mode']} mode.")
+    
+    return jsonify({
+        "message": f"Session started in {session['mode']} mode.",
+        "sessionId": session['user_id'],
+        "proofCode": session['student_model']['current_proof_state'],
+        "aiResponse": prompts.PLANNING_PROMPT_INITIAL
+    })
 
-TACTIC_GENERATION_PROMPT = """
-You are an expert in the Lean 4 proof assistant. Your task is to translate a user's
-natural language statement into a single, valid Lean 4 tactic.
+@app.route('/api/chat', methods=['POST'])
+def handle_chat_message():
+    """Handles a standard chat message from the user."""
+    if 'user_id' not in session:
+        return jsonify({"error": "No active session. Please start a session first."}), 401
+    
+    data = request.get_json()
+    if not data or 'message' not in data:
+        return jsonify({"error": "Request body must be JSON with a 'message' field."}), 400
+    
+    user_message = data['message']
+    
+    try:
+        updated_student_model, ai_response = metacognition.process_message(
+            student_model=session['student_model'],
+            user_message=user_message,
+            mode=session.get('mode', 'homework')
+        )
 
-- Respond ONLY with a valid JSON object containing a single key "tactic".
-- The value of "tactic" should be the Lean 4 code as a string.
-- If the user's statement is a conceptual idea that does not map directly to a
-  single tactic (e.g., "I think we need to show..."), the value of "tactic" should be null.
+        session['student_model'] = updated_student_model
+        session.modified = True
 
-Current Proof State:
-```lean
-{proof_state}
-```
+        return jsonify({
+            "aiResponse": ai_response['ai_response_text'],
+            "proofCode": updated_student_model['current_proof_state'],
+            "isVerified": ai_response.get('is_verified')
+        })
 
-User's statement: "{user_message}"
+    except Exception as e:
+        app.logger.error(f"Critical error in handle_chat_message for user {session['user_id']}: {e}", exc_info=True)
+        return jsonify({"error": "An internal server error occurred."}), 500
 
-JSON response:
-"""
+@app.route('/api/explain_concept', methods=['POST'])
+def explain_concept():
+    """
+    --- NEW ENDPOINT ---
+    Handles a request for an explanation of a specific concept (text selection).
+    """
+    if 'user_id' not in session:
+        return jsonify({"error": "No active session."}), 401
+    
+    data = request.get_json()
+    if not data or 'concept' not in data:
+        return jsonify({"error": "Request must be JSON with a 'concept' field."}), 400
+        
+    concept = data.get('concept')
+    # The surrounding text from the chat provides valuable context for the AI.
+    context = data.get('context', '') 
 
-SOCRATIC_HINT_PROMPT = """
-You are a university mathematics professor acting as a Socratic tutor for the
-Lean 4 proof assistant. A student's proof tactic has failed. Your goal is to
-provide a helpful hint that guides them to the correct answer without giving it away.
-
-1.  **Analyze the Error**: Look at the student's goal, the tactic they tried, and the
-    technical error message from the Lean compiler.
-2.  **Explain Conceptually**: Explain the *reason* for the error in simple, conceptual
-    terms. Avoid technical jargon. For example, instead of "type mismatch", say
-    "it looks like you're trying to use a property that applies to whole numbers on a real number."
-3.  **Ask a Guiding Question**: End your response with a question that prompts the
-    student to think about the underlying mathematical concept or a different strategy.
-4.  **Do NOT provide the correct code or tactic.**
-
-Current Proof State (the student's goal):
-```lean
-{proof_state}
-```
-
-Student's failed tactic: `{tactic}`
-
-Lean Compiler Error:
-```
-{error_message}
-```
-
-Your Socratic hint:
-"""
-
-CONCEPTUAL_GUIDANCE_PROMPT = """
-You are an AI assistant and expert in Lean 4. The user has described a correct
-conceptual idea for the proof, but not a formal tactic. Your role is to validate
-their thinking and gently guide them toward the formal Lean 4 tactic that
-implements their idea.
-
-- Acknowledge that their idea is on the right track.
-- Hint at the name of the tactic or the structure of the command that would
-  achieve their goal.
-
-Current Proof State:
-```lean
-{proof_state}
-```
-
-Student's idea: "{user_message}"
-
-Your guidance (e.g., "That's exactly the right idea! In Lean, you can apply that property using the 'rewrite' tactic, which is often abbreviated as 'rw'. How would you use that here?"):
-"""
-
-
-# ======================================================================================
-# == PROMPTS FOR GENERAL CHAT & ONBOARDING
-# ======================================================================================
-
-GENERAL_CHAT_PROMPT = """
-You are an AI assistant helping a student with a formal proof in Lean 4. The
-student is asking a question or making a comment that is not a proof step.
-Provide a helpful, encouraging, and conversational response.
-
-Current Proof State:
-```lean
-{proof_state}
-```
-
-Student's message: "{user_message}"
-
-Your response:
-"""
-
-SYLLABUS_EXTRACTION_PROMPT = """
-From the syllabus text provided below, extract the 5-10 most important,
-substantive concepts for the course. Focus on key topics, theories, or methods.
-
-- Return a single JSON object with one key: "concepts".
-- The value of "concepts" should be an array of strings.
-
-Example: {{"concepts": ["Group Theory", "Ring Homomorphisms", "Field Extensions"]}}
-
-Syllabus Text:
----
-{syllabus_text}
----
-
-JSON response:
-"""
-
-CONCEPT_EXPLANATION_PROMPT = """
-You are a university mathematics professor. Provide a clear, concise, and
-intuitive explanation of the following concept.
-
-- Use LaTeX for all mathematical notation (e.g., $inline$ and $$block$$).
-- Aim for an explanation that would be suitable for an undergraduate student
-  seeing this topic for the first time.
-
-Concept: **{concept}**
-"""
+    try:
+        # Use a new, specific prompt for this task.
+        prompt = prompts.CONCEPT_EXPLANATION_PROMPT.format(concept=concept, context=context)
+        explanation = get_llm_response(prompt)
+        return jsonify({"explanation": explanation})
+        
+    except Exception as e:
+        app.logger.error(f"Failed to get explanation for '{concept}': {e}", exc_info=True)
+        return jsonify({"error": "Failed to generate explanation."}), 500
 
 
+@app.route('/api/upload_assignment', methods=['POST'])
+def upload_assignment():
+    """Handles file uploads for homework or exam assignments."""
+    if 'user_id' not in session:
+        return jsonify({"error": "No active session. Please start a session first."}), 401
+
+    if 'file' not in request.files:
+        return jsonify({"error": "No file part in the request."}), 400
+    
+    file = request.files['file']
+
+    if file.filename == '':
+        return jsonify({"error": "No file selected."}), 400
+
+    if file:
+        file_path, error = rag_manager.save_assignment_file(session['user_id'], file)
+        if error:
+            return jsonify({"error": error}), 500
+        
+        return jsonify({"message": "File uploaded successfully.", "filePath": file_path}), 200
+    
+    return jsonify({"error": "Invalid file."}), 400
 
 
+@app.route('/api/add_class', methods=['POST'])
+def add_class():
+    """Handles syllabus upload to create a new 'class' with extracted concepts."""
+    if 'syllabus' not in request.files or 'className' not in request.form:
+        return jsonify({"error": "Request must be multipart/form-data with 'syllabus' file and 'className' field."}), 400
+    
+    file, class_name = request.files['syllabus'], request.form['className']
+        
+    try:
+        syllabus_text = extract_text_from_pdf(file) if file.filename.lower().endswith('.pdf') else file.read().decode('utf-8')
+        
+        prompt = prompts.SYLLABUS_EXTRACTION_PROMPT.format(syllabus_text=syllabus_text[:8000])
+        concepts_json_str = get_llm_response(prompt, is_json=True)
+        concepts = json.loads(concepts_json_str).get("concepts", [])
+        
+        class_id = str(uuid.uuid4())
+        CLASSES[class_id] = {"name": class_name, "concepts": concepts}
+            
+        app.logger.info(f"Added new class '{class_name}' with ID {class_id}")
+        return jsonify({"classId": class_id, "className": class_name, "concepts": concepts})
+        
+    except Exception as e:
+        app.logger.error(f"Error in /add_class: {e}", exc_info=True)
+        return jsonify({"error": "An unexpected server error occurred while analyzing the syllabus."}), 500
 
-# This prompt instructs the LLM to act as a Socratic guide when the user
-# says something that isn't a formal proof tactic. It is designed to
-# generate a non-deterministic, context-aware, and helpful response.
-DYNAMIC_HELPER_PROMPT = """
-You are an AI assistant in a Socratic tutoring system for the Lean 4 proof assistant.
-Your current role is to act as an empathetic and intelligent guide.
+# --- Main Execution ---
+if __name__ == '__main__':
+    app.logger.info("--- Altera Labs Backend Starting ---")
+    app.run(host='0.0.0.0', port=5000, debug=True)
 
-The user is in the middle of a proof and was expected to provide a formal Lean tactic.
-Instead, they said something conversational, emotional, or confusing.
-
-**Your Task:**
-Generate a short, helpful, and non-robotic response. Do NOT generate a formal proof tactic.
-Your response should:
-1. Acknowledge the user's message in a natural way.
-2. Gently remind them that a formal tactic is expected in this phase.
-3. Offer help or a way forward without being repetitive.
-
-**Current Proof State:**
-```lean
-{proof_code}
-````
-
-**User's Message:**
-"{user\_message}"
-
-**Example of a good response:**
-"It sounds like you might be feeling a bit stuck. That's totally normal. Right now, I'm set up to process formal Lean tactics like `rw` or `intro`. If you're not sure what to do next, we could try thinking about the goal and outlining a small step to get there. What do you think?"
-
-**Your AI-generated response:**
-"""
-
-# ======================================================================================
-# == PROMPTS FOR METACOGNITIVE SCAFFOLDING (Future Implementation)
-# ======================================================================================
-
-# These prompts are based on the "Plan-Monitor-Reflect" cycle described in the
-# Altera Labs research documents.
-
-PLANNING_PROMPT_INITIAL = """
-Welcome to the Proof Auditor! Before we begin writing the formal proof, let's
-make a plan. In your own words, what is the main goal of this proof? What are
-we trying to show?
-"""
-
-PLANNING_PROMPT_STRATEGY = """
-That's a great summary of the goal. Now, what's your initial strategy?
-How do you think we should start? Don't worry about formal code yet, just
-describe your first logical step.
-"""
-
-REFLECTION_PROMPT_SUCCESS = """
-Excellent work, the proof is complete! Let's take a moment to reflect.
-
-- What was the key insight or the most critical step in this proof?
-- Could this proof have been done a different way?
-"""
-
-REFLECTION_PROMPT_ASSIST = """
-Great job, we got there! Let's take a moment to reflect on the process.
-
-- Which step was the most challenging, and what did you learn from it?
-- What's the main takeaway from this exercise that you can apply to future proofs?
-"""
-
-MONITORING_PROMPT_START = "That sounds like a solid plan. Let's get started!\n\nWhat is the first formal step or tactic you'd like to try?"
-
-REFLECTION_PROMPT_TACTIC_FAILURE = "I'm not sure how to turn that into a formal proof step. Could you try rephrasing it as a command or tactic?\n\nFor example, you could try a tactic like `intro` to introduce hypotheses, or `rw` to rewrite a goal."
