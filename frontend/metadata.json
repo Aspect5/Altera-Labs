@@ -1,0 +1,6 @@
+{
+  "name": "3rd prototype Dynamic Knowledge Graph Visualizer",
+  "description": "An application to simulate how an AI tutor ingests a syllabus, builds a knowledge graph of concepts, and uses student mastery data to generate personalized learning interventions.",
+  "requestFramePermissions": [],
+  "prompt": ""
+}
