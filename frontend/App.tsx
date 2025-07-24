@@ -152,47 +152,47 @@ const App: React.FC = () => {
             );
         }
 
-        if (isLoadingSyllabus || nodes.length === 0 || error) {
+        // If no syllabus is loaded yet, show a placeholder in the main panel.
+        if (nodes.length === 0) {
             return (
-                <div className="flex justify-center items-center h-full">
-                    <SyllabusInput
-                        className={className}
-                        setClassName={setClassName}
-                        onProcessSyllabus={handleProcessSyllabus}
-                        isLoading={isLoadingSyllabus}
-                    />
+                <div className="flex h-full items-center justify-center rounded-lg bg-slate-800/50 p-4 text-center shadow-inner">
+                    <div>
+                        <h3 className="text-xl font-semibold text-cyan-400">Welcome to Altera Labs</h3>
+                        <p className="mt-2 text-slate-400">To begin your session, please create a class using the panel on the left.</p>
+                    </div>
                 </div>
             );
         }
         
+        // This is the main view after the syllabus has been loaded.
         return (
-            <div className="flex flex-col gap-6 h-full overflow-y-auto">
+            <div className="flex h-full flex-col gap-6 overflow-y-auto">
                 <div className="flex items-center gap-4">
                     <h2 className="text-xl font-semibold text-blue-400">AI Mentor Session</h2>
                     <ViewModeSwitcher viewMode={currentView} setViewMode={setCurrentView} />
                     <button 
                         onClick={handleFinishExam} 
-                        className="ml-auto bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-md transition-colors"
+                        className="ml-auto rounded-md bg-red-600 px-4 py-2 font-bold text-white transition-colors hover:bg-red-500"
                     >
                         Finish Exam (Simulate)
                     </button>
                 </div>
 
                 {currentView === 'graph' ? (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
-                        <div className="bg-slate-800/50 p-4 rounded-lg shadow-inner col-span-2 lg:col-span-1 flex flex-col">
-                             <div className="flex-1 min-h-0">
-                                <h3 className="text-lg font-semibold text-cyan-400 mb-2">Knowledge Graph</h3>
-                                <KnowledgeGraph nodes={nodes} edges={edges} knowledgeState={knowledgeState} />
-                             </div>
-                             <div className="mt-4">
-                                <h3 className="text-lg font-semibold text-cyan-400 mt-4 mb-2">Proof State</h3>
-                                <pre className="bg-gray-900 text-white p-4 rounded-md text-sm whitespace-pre-wrap overflow-x-auto">
-                                    <code>{proofCode}</code>
-                                </pre>
-                             </div>
+                    <div className="grid h-full grid-cols-1 gap-6 lg:grid-cols-2">
+                        <div className="col-span-2 flex flex-col rounded-lg bg-slate-800/50 p-4 shadow-inner lg:col-span-1">
+                                <div className="min-h-0 flex-1">
+                                    <h3 className="mb-2 text-lg font-semibold text-cyan-400">Knowledge Graph</h3>
+                                    <KnowledgeGraph nodes={nodes} edges={edges} knowledgeState={knowledgeState} />
+                                </div>
+                                <div className="mt-4">
+                                    <h3 className="mb-2 mt-4 text-lg font-semibold text-cyan-400">Proof State</h3>
+                                    <pre className="overflow-x-auto whitespace-pre-wrap rounded-md bg-gray-900 p-4 text-sm text-white">
+                                        <code>{proofCode}</code>
+                                    </pre>
+                                </div>
                         </div>
-                        <div className="col-span-2 lg:col-span-1 flex flex-col">
+                        <div className="col-span-2 flex flex-col lg:col-span-1">
                             <ChatMentor
                                 history={chatHistory}
                                 isLoading={isAiLoading}

@@ -184,16 +184,28 @@ def add_class():
     file, class_name = request.files['syllabus'], request.form['className']
     try:
         syllabus_text = extract_text_from_pdf(file) if file.filename.lower().endswith('.pdf') else file.read().decode('utf-8')
-        prompt = prompts.SYLLABUS_EXTRACTION_PROMPT.format(syllabus_text=syllabus_text[:8000])
-        concepts_json_str = get_llm_response(prompt, is_json=True)
-        concepts = json.loads(concepts_json_str).get("concepts", [])
+        
+        # --- STEP 1: Get Concepts ---
+        concepts_prompt = prompts.SYLLABUS_CONCEPTS_PROMPT.format(syllabus_text=syllabus_text[:8000])
+        concepts_response_str = get_llm_response(concepts_prompt, is_json=True)
+        concepts = json.loads(concepts_response_str).get("concepts", [])
+        
+        edges = []
+        # --- STEP 2: Get Edges (if concepts were found) ---
+        if concepts:
+            edges_prompt = prompts.SYLLABUS_EDGES_PROMPT.format(concepts_json_string=json.dumps(concepts))
+            edges_response_str = get_llm_response(edges_prompt, is_json=True)
+            edges = json.loads(edges_response_str).get("edges", [])
+
         class_id = str(uuid.uuid4())
-        CLASSES[class_id] = {"name": class_name, "concepts": concepts}
-        app.logger.info(f"Added new class '{class_name}' with ID {class_id}")
-        return jsonify({"classId": class_id, "className": class_name, "concepts": concepts})
+        CLASSES[class_id] = {"name": class_name, "concepts": concepts, "edges": edges}
+        app.logger.info(f"Added new class '{class_name}' with ID {class_id} and {len(edges)} edges.")
+        
+        return jsonify({"classId": class_id, "className": class_name, "concepts": concepts, "edges": edges})
+        
     except Exception as e:
         app.logger.error(f"Error in /add_class: {e}", exc_info=True)
         return jsonify({"error": "Server error analyzing syllabus."}), 500
-
+    
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

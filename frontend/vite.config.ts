@@ -20,7 +20,7 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         // This allows you to use '@' as an alias for the 'src' directory
-        '@': path.resolve(__dirname, './src'),
+        '@': path.resolve(__dirname, './'),
       },
     },
     server: {
