@@ -1,0 +1,71 @@
+Course Syllabus
+Jump to Today
+Instructor:  
+
+Yueqiao Wu (She/Her/Hers), ywu347@jh.edu
+Office: Krieger 405.
+Office Hours:  MW 3-4pm, F 10-11am.
+Lecture Meetings: MW 12:00pm -- 1:15pm, Maryland 217
+
+Section Meetings: F 12:00pm -- 12:50pm, Krieger Laverty
+
+TA:  Ben Marlin, bmarlin1@jhu.edu
+
+Office Hours: Tuesdays, 10 am - 12 pm -- Krieger 204. 
+Textbook & References:  
+
+(Textbook) Groups and Symmetry, 1st Edition, Armstrong, M.A., Springer-Verlag New York, 1988. ISBN: 978-1-4757-4034-9. 
+Other possible references/extra reading material include: Algebra, M. Artin; Abstract Algebra: An Introduction, T. Hungerford.
+More advanced: Abstract Algebra, Dummit & Foote; Algebra, T. Hungerford.
+Course Structure and Expectations:
+
+This is a proof-based course. You will be expected to read/understand/write/re-produce proofs of theorems/problems.
+We will mostly follow the textbook, with occasional reordering/addition of material. You are expected to read and understand the text thoroughly before and/or after class, especially before attempting your homework problems. An overview of topics covered the following week will be updated in Modules, on Friday the prior week. 
+You are expected to attend both lectures and section meetings, and participate in discussions. This is where participation grades will be based, see below. 
+You are strongly encouraged to go to office hours. This is where you can get help on understanding the material and homework. 
+Course Description: 
+
+An introduction to the basic notions of modern abstract algebra and can serve as Introduction to Proofs (IP) course. This course is an introduction to group theory, with an emphasis on concrete examples, and especially on geometric symmetry groups. The course will introduce basic notions (groups, subgroups, homomorphisms, quotients) and prove foundational results (Lagrange’s theorem, Cauchy’s theorem, orbit-counting techniques, the classification of finite abelian groups). Examples to be discussed include permutation groups, dihedral groups, matrix groups, and finite rotation groups, culminating in the classification of the wallpaper groups. Prerequisites: Grade of C- or better in 110.201 or 110.212 Area: Quantitative and Mathematical Sciences. 
+
+Course Description on departmental website Links to an external site.
+
+Grade Policy: 
+
+Homework: 40%
+Class participation: 10%
+Exams: 50% (Midterm: 20% + Final: 30% OR Final: 50%, whichever is better.)
+Homework (40% of your final grade): 
+
+Weekly homework sets will be posted and submitted through Gradescope. Latex-generated pdf submissions are strongly encouraged, but not required.
+Collaborations are strongly encouraged, but you should write up your own solutions. List names of people that you collaborated with on top of each homework assignment. 
+Homework problems will be proof-based. As such, your assignment will be graded on both correctness and proof writing. See tips for writing proofs here: Tips for writing proofs.
+The lowest homework will be dropped.
+Late Policy: All homework sets will be due on the Friday of the week following their assignment, 11:59pm, Eastern Time (ET).  Late submissions will be accepted up until that Sunday night, 11:59pm, ET.  Late submission without instructor/TA permission will be docked 10% (rounded down).  Late submission with permission (i.e., with valid document) will not be docked.  Those seeking permission will have to contact the instructor/TA prior to 6pm on the due date. 
+
+Exams (50% of your final grade):  
+
+Dates:
+Midterm: March 12, in class.
+Final Exam: May 13, 2-5pm.
+Make-up Policy: No make-ups will be given. If you have to miss the midterm with valid documentation presented (and approved), then your final grade will be calculated using better of the following: 40% HW+50% Final OR 45% HW+45% Final.
+Student Disability Services:
+
+Students with documented disabilities or other special needs who require accommodation must be registered with the JHU Office for Student Disability Services (https://studentaffairs.jhu.edu/disabilities Links to an external site.) to receive accommodations. The instructor must be provided with the official letter stating all the needs from the Student Disability Services.
+
+Technology:
+
+Canvas will host the course website where you will find all learning materials for the course.  Please make sure that you are comfortable scanning and uploading materials via Gradescope. There are excellent smartphone scanner apps that will convert photos of documents to high resolution PDFs (see e.g. https://www.nytimes.com/wirecutter/reviews/best-mobile-scanning-apps/Links to an external site.). The Gradescope app allows you to directly convert pictures taken into a submission. Please ask each other, TAs, and the instructor for help if you are struggling to use any of these tools. Generative AI programs are not allowed to be used to create all or part of any submission for this course. If you have questions about the use of such a program, ask the instructor.
+
+Ethics Statement:  
+
+The strength of the university depends on academic and personal integrity. In this course, you must be honest and truthful. Cheating is wrong. Cheating hurts our community by undermining academic integrity, creating mistrust, and fostering unfair competition. The university will punish cheaters with failure on an assignment, failure in a course, permanent transcript notation, suspension, and/or expulsion. Offenses may be reported to medical, law, or other professional or graduate schools when a cheater applies. 
+
+Violations can include cheating on exams, plagiarism, reuse of assignments without permission, improper use of the Internet and electronic devices unauthorized collaboration, alteration of graded assignments, forgery and falsification, lying, facilitating academic dishonesty, and unfair competition. Ignorance of these rules is not an excuse. 
+
+In this course, as in many math courses, working in groups to study particular problems and discuss theory is strongly encouraged. Your ability to talk mathematics is of particular importance to your general understanding of mathematics. 
+
+You should collaborate with other students in this course on the general construction of homework assignment problems. However, you must write up the solutions to these homework problems individually and separately. If there is any question as to what this statement means, please see the professor or the grader. 
+
+For more information, see the guide on "Academic Ethics for Undergraduates" at the JHU Student Affairs web site:
+
+https://studentaffairs.jhu.edu/viceprovost/student-conduct-ethics/

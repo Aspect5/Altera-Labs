@@ -30,5 +30,11 @@
   },
 
   "forwardPorts": [5173, 5000],
+  "mounts": [
+      // Mounts the gcloud config directory from your local machine to the container
+      // This lets your app use your local user's credentials for Google Cloud
+      "source=${localEnv:HOME}${localEnv:USERPROFILE}/.config/gcloud,target=/home/vscode/.config/gcloud,type=bind,consistency=cached"
+    ],
+
   "remoteUser": "vscode"
 }

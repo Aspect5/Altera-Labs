@@ -35,25 +35,6 @@ except ImportError:
 # Configure logging to provide visibility into the module's operations.
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# --- Vertex AI Configuration ---
-# Load configuration from environment variables for security and flexibility.
-try:
-    PROJECT_ID = os.environ["GOOGLE_CLOUD_PROJECT"]
-    LOCATION = os.environ["GOOGLE_CLOUD_LOCATION"]
-    # Initialize the Vertex AI client. This is a one-time setup.
-    vertexai.init(project=PROJECT_ID, location=LOCATION)
-    logging.info(f"Vertex AI initialized successfully for project '{PROJECT_ID}' in '{LOCATION}'.")
-except KeyError as e:
-    logging.critical(f"FATAL: Environment variable {e} not set. Vertex AI cannot be initialized.")
-    # Exit or handle this case gracefully if the application cannot run without Vertex AI.
-    PROJECT_ID = None
-    LOCATION = None
-except Exception as e:
-    logging.critical(f"FATAL: An unexpected error occurred during Vertex AI initialization: {e}")
-    PROJECT_ID = None
-    LOCATION = None
-
-
 # --- Lean Verifier Configuration ---
 # Use pathlib for robust, cross-platform path management.
 BACKEND_DIR = Path(__file__).parent.resolve()
@@ -64,7 +45,7 @@ LEAN_MAIN_FILE = LEAN_PROJECT_PATH / 'LeanVerifier.lean'
 LAKE_EXECUTABLE_PATH = os.getenv('LAKE_EXECUTABLE_PATH', 'lake')
 
 
-def get_llm_response(prompt: str, model_name: str = "gemini-1.5-flash-001", is_json: bool = False) -> str:
+def get_llm_response(prompt: str, model_name: str = "gemini-2.5-flash", is_json: bool = False) -> str:
     """
     Handles all communication with the Vertex AI Generative Model.
 
@@ -79,10 +60,6 @@ def get_llm_response(prompt: str, model_name: str = "gemini-1.5-flash-001", is_j
     Returns:
         str: The text response from the model.
     """
-    if not PROJECT_ID:
-        logging.warning("Vertex AI not initialized. Falling back to local stub.")
-        return local_llm_stub.generate_response(prompt, is_json_output=is_json)
-
     try:
         # Instantiate the model
         model = GenerativeModel(model_name)
@@ -100,7 +77,7 @@ def get_llm_response(prompt: str, model_name: str = "gemini-1.5-flash-001", is_j
         generation_config = {
             "temperature": 0.3, # Lower temperature for more deterministic, less "creative" output
             "top_p": 0.95,
-            "max_output_tokens": 1024,
+            "max_output_tokens": 20000,
         }
         if is_json:
             generation_config["response_mime_type"] = "application/json"
