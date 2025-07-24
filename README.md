@@ -13,7 +13,6 @@ The application is designed around two primary workflows: a collaborative **Home
   * **Metacognitive Scaffolding**: The AI guides students through a **Plan-Monitor-Reflect** cycle, prompting them to articulate their strategy and reflect on their learning.  
   * **Natural Language to Formal Verification**: Students propose proof steps in plain English or LaTeX. The system translates this into formal Lean 4 tactics and verifies them for logical correctness using a real Lean compiler.  
   * **Pedagogical Feedback**: If a step is incorrect, the AI uses the compiler's error to generate a targeted, Socratic hint, guiding the student without giving away the answer.  
-* **Homework & Exam Modes**: The AI's entire pedagogical stance changes based on the user's selected mode. "Homework Mode" is collaborative and supportive, while "Exam Mode" is a sterile environment for true assessment.  
 * **Advanced Student Modeling**: The system uses Bayesian Knowledge Tracing (BKT) to build a persistent, personalized model of each student's mastery and uncertainty for every concept in the knowledge graph.
 
 ## **🛠️ Technology Stack**
@@ -86,9 +85,8 @@ Our development is guided by a phased plan to progressively build out the AI Cog
 * ➡️ **Phase 2: Knowledge Graph & User-Facing Analytics (In Progress)**  
   * ✅ Implemented interactive, syllabus-driven Knowledge Graph generation.  
   * ✅ Implemented "Highlight-to-Ask" for contextual concept explanations.  
-  * *Up Next:* A dedicated SessionView for proof-auditing.  
   * *Up Next:* A post-exam results screen with a personalized review plan.  
+  * *Up Next:* Full integration of the SessionView for interactive proof-auditing.  
 * *Future:* **Phase 3: Advanced AI & Personalization**  
-  * Full integration of the SessionView with the Socratic Verifier.  
   * AI-driven "pre-work" where the tutor solves homework to provide better guidance.  
   * Affective computing to detect and respond to student frustration.

@@ -1,51 +1,45 @@
-
-import * as d3 from 'd3';
+// frontend/types.ts
 
 export interface GraphNode {
   id: string;
   label: string;
 }
 
+// FIXED: This is the correct shape for an Edge based on your components.
 export interface Edge {
-  source: string; // node id
-  target: string; // node id
-  weight: number; // 0.0 to 1.0
+  source: string;
+  target: string;
+  weight: number;
 }
 
 export interface KnowledgeState {
   [nodeId: string]: {
-    mu: number; // Mean skill estimate (0.0 to 1.0)
-    sigma: number; // Uncertainty (e.g., 0.0 to 0.5, lower is more certain)
+    mu: number; // Mastery estimate (mean)
+    sigma: number; // Uncertainty (standard deviation)
   };
 }
 
-export interface PracticeSuggestion {
+export interface ChatMessage {
+  role: 'user' | 'model' | 'system';
+  content: string;
+  suggestion?: {
     nodeId: string;
     label: string;
+  };
+  practiceNodeId?: string;
 }
 
-export interface Reassessment {
-    nodeId: string;
-    reasoning: string;
-    newMu: number;
-    newSigma: number;
-}
-
-export interface ChatMessage {
-    role: 'user' | 'model' | 'system';
-    content: string;
-    suggestion?: PracticeSuggestion;
-    practiceNodeId?: string; // Signals the UI to show correct/incorrect buttons
-}
-
-
-// For D3 simulation
-export interface D3Node extends GraphNode, d3.SimulationNodeDatum {
+// D3 types for the simulation
+export interface D3Node extends GraphNode {
+    x?: number;
+    y?: number;
+    vx?: number;
+    vy?: number;
     mu: number;
     sigma: number;
 }
 
-export interface D3Link extends d3.SimulationLinkDatum<D3Node> {
+export interface D3Link {
     source: string | D3Node;
     target: string | D3Node;
     weight: number;

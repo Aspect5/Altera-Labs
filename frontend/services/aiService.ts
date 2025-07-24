@@ -7,7 +7,7 @@
  */
 
 // --- Type Imports ---
-import { GraphNode, Edge } from '../types';
+import { GraphNode, Edge, KnowledgeState } from '../types';
 
 // --- API Configuration ---
 const API_BASE_URL = 'http://localhost:5000/api';
@@ -24,6 +24,16 @@ interface ChatResponse {
   aiResponse: string;
   proofCode: string;
   isVerified: boolean | null;
+}
+
+// --- NEW ---
+interface FinalizeExamResponse {
+    message: string;
+    finalKnowledgeState: KnowledgeState;
+}
+
+interface ExplainConceptResponse {
+  explanation: string;
 }
 
 interface AddClassResponse {
@@ -115,3 +125,16 @@ export const startSession = async (mode: 'homework' | 'exam'): Promise<StartSess
     });
     return handleResponse<ChatResponse>(response);
   };
+
+  /**
+ * --- NEW FUNCTION ---
+ * Finalizes an exam session and retrieves the results.
+ * @returns A promise that resolves with the final knowledge state.
+ */
+export const finalizeExam = async (): Promise<FinalizeExamResponse> => {
+    const response = await fetch(`${API_BASE_URL}/finalize_exam`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+    });
+    return handleResponse<FinalizeExamResponse>(response);
+};
