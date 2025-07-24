@@ -30,28 +30,18 @@ const App: React.FC = () => {
     // --- State for Socratic Verifier ---
     const [proofCode, setProofCode] = useState<string>("example (a b : ℝ) : a * b = b * a := by\n  sorry");
 
-    // --- FIXED: Removed unused adjacencyInfo memo ---
-
     const handleProcessSyllabus = useCallback(async (syllabusFile: File) => {
         setIsLoadingSyllabus(true);
         setError(null);
         try {
-            const { concepts: newNodes } = await addClassFromSyllabus(className, syllabusFile);
+            // 1. Destructure BOTH concepts (as newNodes) and the AI-generated edges.
+            const { concepts: newNodes, edges: newEdges } = await addClassFromSyllabus(className, syllabusFile);
+            
+            // 2. Set the nodes and the new edges from the backend.
             setNodes(newNodes);
+            setEdges(newEdges); // Use the AI-generated edges.
 
-            const dummyEdges: Edge[] = [];
-            if (newNodes.length > 1) {
-                for (let i = 0; i < newNodes.length - 1; i++) {
-                    dummyEdges.push({
-                        id: `${newNodes[i].id}->${newNodes[i+1].id}`,
-                        source: newNodes[i].id,
-                        target: newNodes[i+1].id,
-                        label: 'is_related_to',
-                    });
-                }
-            }
-            setEdges(dummyEdges);
-
+            // Initialize the knowledge state as before.
             const initialKnowledge: KnowledgeState = newNodes.reduce((acc, node) => {
                 acc[node.id] = { mu: 0, sigma: 0.5 };
                 return acc;

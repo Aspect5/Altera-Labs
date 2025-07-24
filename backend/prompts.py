@@ -4,33 +4,25 @@
 This file contains all the prompt templates used for interacting with the LLM.
 """
 
-# STEP 1: A prompt to only extract concepts from a syllabus.
-SYLLABUS_CONCEPTS_PROMPT = """
-Analyze the following syllabus text. Your task is to identify and extract only the core academic and technical concepts.
+# A single, unified prompt to generate a complete knowledge graph from a syllabus.
+SYLLABUS_GRAPH_PROMPT = """
+You are an expert in educational theory and computer science. Your task is to analyze the provided course syllabus and construct an educational knowledge graph.
 
-- You MUST ignore all administrative, logistical, or grading-related terms (e.g., "homework", "exam", "office hours", "Gradescope", "Canvas", "textbook").
-- Return a single JSON object with a key "concepts", which is a list of objects.
-- Each concept object must have an "id" (a snake_case string) and a "label" (the concept name).
+1.  **Extract Key Concepts:** Identify the main technical topics or concepts from the syllabus. These will be the **nodes** of your graph. Create a unique, simple `id` (snake_case) and a clean, human-readable `label` for each concept. You MUST ignore administrative terms like "homework," "exam," "office hours," etc.
+
+2.  **Determine Prerequisites:** Analyze the text to find prerequisite relationships. Words like "builds upon," "requires," or sequential ordering (e.g., Week 2 topics are prerequisites for Week 3) indicate a relationship. These will be the **edges** of your graph.
+
+3.  **Assign Weights:** For each prerequisite relationship (edge), assign a numerical **weight** from 0.0 to 1.0.
+    * A weight of **0.9-1.0** means it's a **hard prerequisite** (e.g., you cannot understand 'Derivatives' without 'Limits').
+    * A weight of **0.4-0.7** means it's a **strong suggestion**.
+    * A weight of **0.1-0.3** means it's a **weakly related** concept.
+
+- You MUST return a single JSON object containing two keys: "nodes" and "edges".
+- If no concepts or edges are found, return empty lists.
 
 Syllabus Text:
 ---
 {syllabus_text}
----
-"""
-
-# STEP 2: A prompt to generate relationships (edges) for a given list of concepts.
-SYLLABUS_EDGES_PROMPT = """
-Analyze the following list of academic concepts extracted from a syllabus.
-Your task is to determine the prerequisite relationships between them.
-
-- Return a single JSON object with a key "edges".
-- The "edges" key should be a list of objects, each representing a prerequisite link.
-- Each edge object must have an "id" (e.g., "source->target"), "source" (the ID of the prerequisite concept), "target" (the ID of the concept that depends on it), and a "label" of "is_prerequisite_for".
-- Only create edges for strong, direct prerequisite relationships. If there are no relationships, return an empty list.
-
-List of Concepts:
----
-{concepts_json_string}
 ---
 """
 

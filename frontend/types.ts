@@ -1,18 +1,24 @@
-// frontend/types.ts
+import * as d3 from 'd3';
 
+// Main graph structure types
 export interface GraphNode {
     id: string;
     label: string;
-    type: 'concept' | 'skill' | 'competency';
+    // --- Kept from the new version ---
+    type: 'concept' | 'skill' | 'competency'; 
 }
 
 export interface Edge {
-    id: string;
+    // --- Kept from the new version ---
+    id: string; 
+    label: 'is_prerequisite_for' | 'is_related_to';
+
     source: string;
     target: string;
-    label: 'is_prerequisite_for' | 'is_related_to';
+    weight: number; // 💡 RESTORED: This is critical for the graph and matrix
 }
 
+// Student model and state
 export interface KnowledgeState {
     [nodeId: string]: {
         mu: number;      // Mean (belief of mastery)
@@ -20,7 +26,33 @@ export interface KnowledgeState {
     };
 }
 
-// --- NEW: For the Socratic Verifier ---
+// --- RESTORED: Types for AI Mentor actions ---
+export interface PracticeSuggestion {
+    nodeId: string;
+    label: string;
+}
+
+export interface Reassessment {
+    nodeId: string;
+    reasoning: string;
+    newMu: number;
+    newSigma: number;
+}
+
+// --- RESTORED: Types for D3 Visualization ---
+// Centralizing these types is good practice
+export interface D3Node extends GraphNode, d3.SimulationNodeDatum {
+    mu: number;
+    sigma: number;
+}
+
+export interface D3Link extends d3.SimulationLinkDatum<D3Node> {
+    source: string | D3Node;
+    target: string | D3Node;
+    weight: number;
+}
+
+// --- KEPT: For the Socratic Verifier ---
 export interface VerificationResult {
     verified: boolean;
     is_complete: boolean;
@@ -29,16 +61,12 @@ export interface VerificationResult {
     error: string | null;
 }
 
-// --- CORRECTED: The existing ChatMessage interface, now updated ---
+// --- MERGED: Chat message with all features ---
 export interface ChatMessage {
   role: 'user' | 'model' | 'system';
   content: string;
-  suggestion?: {
-    nodeId: string;
-    label: string;
-  };
+  suggestion?: PracticeSuggestion; // Restored for clarity
   practiceNodeId?: string;
-  // --- NEW: Optional field for verification results ---
   verification?: {
       verified: boolean;
       isComplete: boolean;
