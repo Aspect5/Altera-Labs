@@ -180,32 +180,40 @@ def upload_assignment():
 @app.route('/api/add_class', methods=['POST'])
 def add_class():
     if 'syllabus' not in request.files or 'className' not in request.form:
-        return jsonify({"error": "Missing form data."}), 400
-    file, class_name = request.files['syllabus'], request.form['className']
+        return jsonify({"error": "Missing form data: 'syllabus' file and 'className' are required."}), 400
+    
+    file = request.files['syllabus']
+    class_name = request.form['className']
+
     try:
+        # Extract text from the uploaded file (PDF or text)
         syllabus_text = extract_text_from_pdf(file) if file.filename.lower().endswith('.pdf') else file.read().decode('utf-8')
         
-        # --- STEP 1: Get Concepts ---
-        concepts_prompt = prompts.SYLLABUS_CONCEPTS_PROMPT.format(syllabus_text=syllabus_text[:8000])
-        concepts_response_str = get_llm_response(concepts_prompt, is_json=True)
-        concepts = json.loads(concepts_response_str).get("concepts", [])
+        # --- Use the single, unified prompt to generate the entire graph ---
+        graph_prompt = prompts.SYLLABUS_GRAPH_PROMPT.format(syllabus_text=syllabus_text[:8000]) # Truncate for safety
         
-        edges = []
-        # --- STEP 2: Get Edges (if concepts were found) ---
-        if concepts:
-            edges_prompt = prompts.SYLLABUS_EDGES_PROMPT.format(concepts_json_string=json.dumps(concepts))
-            edges_response_str = get_llm_response(edges_prompt, is_json=True)
-            edges = json.loads(edges_response_str).get("edges", [])
+        # Make one call to get the complete graph
+        graph_response_str = get_llm_response(graph_prompt, is_json=True)
+        graph_data = json.loads(graph_response_str)
+
+        # The prompt returns 'nodes', but the frontend expects 'concepts'
+        concepts = graph_data.get("nodes", [])
+        edges = graph_data.get("edges", [])
 
         class_id = str(uuid.uuid4())
         CLASSES[class_id] = {"name": class_name, "concepts": concepts, "edges": edges}
-        app.logger.info(f"Added new class '{class_name}' with ID {class_id} and {len(edges)} edges.")
         
+        app.logger.info(f"Added new class '{class_name}' with {len(concepts)} concepts and {len(edges)} edges.")
+        
+        # Return the data in the format the frontend expects
         return jsonify({"classId": class_id, "className": class_name, "concepts": concepts, "edges": edges})
         
+    except json.JSONDecodeError as e:
+        app.logger.error(f"Error decoding JSON from LLM response: {e}\nResponse was: {graph_response_str}", exc_info=True)
+        return jsonify({"error": "Failed to parse AI response."}), 500
     except Exception as e:
         app.logger.error(f"Error in /add_class: {e}", exc_info=True)
-        return jsonify({"error": "Server error analyzing syllabus."}), 500
+        return jsonify({"error": "Server error while analyzing syllabus."}), 500
     
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
