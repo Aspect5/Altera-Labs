@@ -4,6 +4,7 @@ import os
 import uuid
 import json
 import logging
+import sys # --- ADDED: To allow exiting on critical errors ---
 from pathlib import Path
 from typing import Dict, Any
 
@@ -11,15 +12,34 @@ from dotenv import load_dotenv
 from flask import Flask, request, jsonify, session
 from flask_cors import CORS
 import fitz
+import vertexai # --- ADDED: Import the Vertex AI library ---
 
 from backend import prompts
 from backend import metacognition
 from backend import rag_manager
 from backend.socratic_auditor import get_llm_response
-from backend.lean_verifier import lean_verifier_instance # --- NEW IMPORT ---
+from backend.lean_verifier import lean_verifier_instance 
 
+# --- FIXED: Load environment variables and initialize AI services at startup ---
 load_dotenv()
 
+# Initialize Vertex AI
+try:
+    PROJECT_ID = os.environ.get("VERTEX_AI_PROJECT_ID")
+    LOCATION = os.environ.get("VERTEX_AI_LOCATION")
+
+    if not PROJECT_ID or not LOCATION:
+        logging.critical("FATAL: VERTEX_AI_PROJECT_ID and VERTEX_AI_LOCATION environment variables must be set.")
+        sys.exit(1) 
+
+    vertexai.init(project=PROJECT_ID, location=LOCATION)
+    logging.info(f"Vertex AI initialized successfully for project '{PROJECT_ID}' in '{LOCATION}'.")
+
+except Exception as e:
+    logging.critical(f"FATAL: An unexpected error occurred during Vertex AI initialization: {e}")
+    sys.exit(1) 
+
+# --- Flask App Initialization ---
 app = Flask(__name__)
 app.logger.setLevel(logging.INFO)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-secret-key-replace-in-prod")
@@ -36,7 +56,7 @@ def extract_text_from_pdf(file_stream) -> str:
         raise
 
 # ======================================================================================
-# == API Endpoints
+# == API Endpoints (No changes needed below this line)
 # ======================================================================================
 
 @app.route('/api/health', methods=['GET'])

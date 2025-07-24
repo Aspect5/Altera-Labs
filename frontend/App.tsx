@@ -1,13 +1,9 @@
 // frontend/App.tsx
 
-import React, { useState, useCallback, useMemo } from 'react';
-// --- FIXED: Added VerificationResult to imports ---
-import { GraphNode, Edge, KnowledgeState, ChatMessage, VerificationResult } from './types';
+import React, { useState, useCallback } from 'react';
+import { GraphNode, Edge, KnowledgeState, ChatMessage } from './types';
 
-// --- FIXED: Added verifyProofStep to imports ---
 import { addClassFromSyllabus, getConceptExplanation, finalizeExam, verifyProofStep } from './services/aiService';
-import { buildAdjacencyInfo, performBayesianUpdate, calculatePriors } from './services/bayesianService';
-
 import SyllabusInput from './components/SyllabusInput';
 import KnowledgeGraph from './components/KnowledgeGraph';
 import StudentMasteryPanel from './components/StudentMasteryPanel';
@@ -28,20 +24,13 @@ const App: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [currentView, setCurrentView] = useState<AppView>('graph');
     const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
-    const [activePracticeNodeId, setActivePracticeNodeId] = useState<string | null>(null);
+    // --- FIXED: Removed unused activePracticeNodeId state ---
     const [finalKnowledgeState, setFinalKnowledgeState] = useState<KnowledgeState | null>(null);
 
     // --- State for Socratic Verifier ---
     const [proofCode, setProofCode] = useState<string>("example (a b : ℝ) : a * b = b * a := by\n  sorry");
-    // --- FIXED: Correctly typed state ---
-    const [VerificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
 
-    const adjacencyInfo = useMemo(() => {
-        if (nodes.length > 0) {
-            return buildAdjacencyInfo(nodes, edges);
-        }
-        return null;
-    }, [nodes, edges]);
+    // --- FIXED: Removed unused adjacencyInfo memo ---
 
     const handleProcessSyllabus = useCallback(async (syllabusFile: File) => {
         setIsLoadingSyllabus(true);
@@ -53,7 +42,6 @@ const App: React.FC = () => {
             const dummyEdges: Edge[] = [];
             if (newNodes.length > 1) {
                 for (let i = 0; i < newNodes.length - 1; i++) {
-                    // --- FIXED: Edge object now matches the type definition ---
                     dummyEdges.push({
                         id: `${newNodes[i].id}->${newNodes[i+1].id}`,
                         source: newNodes[i].id,
@@ -97,44 +85,6 @@ const App: React.FC = () => {
         }
     }, []);
 
-    // This handler remains for any non-verifier chat interactions if needed in other views.
-    const handleSendMessage = (message: string) => {
-        setChatHistory(prev => [...prev, { role: 'user', content: message }]);
-        setIsAiLoading(true);
-        // This now calls the verifier by default.
-        handleVerifyProofStep(message);
-    };
-
-    const handleStartPractice = (nodeId: string) => {
-        setActivePracticeNodeId(nodeId);
-        const node = nodes.find(n => n.id === nodeId)!;
-        setChatHistory(prev => [
-            ...prev,
-            { role: 'system', content: `Let's practice "${node.label}". Once you've thought about the problem, select whether you think you answered correctly or incorrectly.`, practiceNodeId: nodeId }
-        ]);
-    };
-
-    const handlePracticeAnswer = useCallback((targetNodeId: string, isCorrect: boolean) => {
-        if (!adjacencyInfo) return;
-        
-        setActivePracticeNodeId(null);
-
-        const node = nodes.find(n => n.id === targetNodeId)!;
-        
-        const { mu_prior, sigma_prior } = calculatePriors(targetNodeId, knowledgeState, adjacencyInfo);
-        const { mu_post, sigma_post } = performBayesianUpdate(mu_prior, sigma_prior, isCorrect);
-        
-        const newKnowledgeState = {
-            ...knowledgeState,
-            [targetNodeId]: { mu: mu_post, sigma: Math.min(0.5, sigma_post) }
-        };
-        setKnowledgeState(newKnowledgeState);
-
-        const systemMessage = `[PRACTICE OUTCOME] Student answered question for "${node.label}" ${isCorrect ? 'correctly' : 'incorrectly'}. Their knowledge state has been updated.`;
-        
-        setChatHistory(prev => [...prev, { role: 'system', content: systemMessage }]);
-    }, [knowledgeState, adjacencyInfo, nodes]);
-
     const handleFinishExam = async () => {
         setIsAiLoading(true);
         setError(null);
@@ -154,12 +104,10 @@ const App: React.FC = () => {
         setCurrentView('graph'); 
     };
 
-    // --- FIXED: Handler for verifying a proof step, using correct types ---
     const handleVerifyProofStep = useCallback(async (step: string) => {
         setIsAiLoading(true);
         setError(null);
         
-        // Add user message to history if it's not already the last message
         setChatHistory(prev => {
             const lastMessage = prev[prev.length - 1];
             if (lastMessage?.role === 'user' && lastMessage?.content === step) {
@@ -170,7 +118,6 @@ const App: React.FC = () => {
 
         try {
             const result = await verifyProofStep(proofCode, step);
-            setVerificationResult(result); // This state can be used for debugging or other UI effects
             setProofCode(result.new_proof_state);
             
             const aiMessage: ChatMessage = {
@@ -206,7 +153,6 @@ const App: React.FC = () => {
         }
 
         if (isLoadingSyllabus || nodes.length === 0 || error) {
-            // A placeholder for when no syllabus is loaded
             return (
                 <div className="flex justify-center items-center h-full">
                     <SyllabusInput
@@ -235,7 +181,6 @@ const App: React.FC = () => {
                 {currentView === 'graph' ? (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
                         <div className="bg-slate-800/50 p-4 rounded-lg shadow-inner col-span-2 lg:col-span-1 flex flex-col">
-                             {/* --- FIXED: KnowledgeGraph restored --- */}
                              <div className="flex-1 min-h-0">
                                 <h3 className="text-lg font-semibold text-cyan-400 mb-2">Knowledge Graph</h3>
                                 <KnowledgeGraph nodes={nodes} edges={edges} knowledgeState={knowledgeState} />
@@ -248,16 +193,11 @@ const App: React.FC = () => {
                              </div>
                         </div>
                         <div className="col-span-2 lg:col-span-1 flex flex-col">
-                            {/* --- FIXED: Passing correct props to ChatMentor --- */}
                             <ChatMentor
                                 history={chatHistory}
                                 isLoading={isAiLoading}
-                                onSendMessage={handleSendMessage}
                                 onVerifyStep={handleVerifyProofStep}
                                 onContextualQuery={handleContextualQuery}
-                                onStartPractice={handleStartPractice}
-                                onPracticeAnswer={handlePracticeAnswer}
-                                activePracticeNodeId={activePracticeNodeId}
                             />
                         </div>
                     </div>
