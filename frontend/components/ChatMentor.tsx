@@ -3,15 +3,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChatMessage } from '../types';
 
-// --- MODIFIED: Simplified props for the Socratic Verifier flow ---
+// --- MODIFIED: Props for both chat and verification modes ---
 interface ChatMentorProps {
     history: ChatMessage[];
     isLoading: boolean;
+    mode: 'chat' | 'verify';
     onVerifyStep: (step: string) => void;
+    onSendMessage?: (message: string) => void;
     onContextualQuery: (selectedText: string, contextText: string) => void;
 }
 
-const ChatMentor: React.FC<ChatMentorProps> = ({ history, isLoading, onVerifyStep, onContextualQuery }) => {
+const ChatMentor: React.FC<ChatMentorProps> = ({ history, isLoading, mode, onVerifyStep, onSendMessage, onContextualQuery }) => {
     const [input, setInput] = useState('');
     const chatEndRef = useRef<HTMLDivElement>(null);
     const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -61,8 +63,11 @@ const ChatMentor: React.FC<ChatMentorProps> = ({ history, isLoading, onVerifySte
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (input.trim() && !isLoading) {
-            // --- MODIFIED: Ensure onVerifyStep is called ---
-            onVerifyStep(input.trim());
+            if (mode === 'chat' && onSendMessage) {
+                onSendMessage(input.trim());
+            } else {
+                onVerifyStep(input.trim());
+            }
             setInput('');
         }
     };
@@ -140,8 +145,7 @@ const ChatMentor: React.FC<ChatMentorProps> = ({ history, isLoading, onVerifySte
                         type="text"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        // --- MODIFIED: Placeholder text updated ---
-                        placeholder={"Enter your proof step here..."}
+                        placeholder={mode === 'chat' ? "Ask a question or describe your approach..." : "Enter your proof step here..."}
                         disabled={isLoading}
                         className="flex-grow bg-slate-900 border border-slate-600 rounded-lg py-2 px-4 focus:ring-2 focus:ring-cyan-500 focus:outline-none disabled:cursor-not-allowed"
                     />

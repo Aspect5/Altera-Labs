@@ -1,9 +1,9 @@
 // frontend/App.tsx
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { GraphNode, Edge, KnowledgeState, ChatMessage } from './types';
 
-import { addClassFromSyllabus, getConceptExplanation, finalizeExam, verifyProofStep } from './services/aiService';
+import { addClassFromSyllabus, getConceptExplanation, finalizeExam, verifyProofStep, startSession, sendMessage } from './services/aiService';
 import SyllabusInput from './components/SyllabusInput';
 import KnowledgeGraph from './components/KnowledgeGraph';
 import StudentMasteryPanel from './components/StudentMasteryPanel';
@@ -28,7 +28,11 @@ const App: React.FC = () => {
     const [finalKnowledgeState, setFinalKnowledgeState] = useState<KnowledgeState | null>(null);
 
     // --- State for Socratic Verifier ---
-    const [proofCode, setProofCode] = useState<string>("example (a b : ℝ) : a * b = b * a := by\n  sorry");
+    const [proofCode, setProofCode] = useState<string>("");
+    
+    // --- State for session management ---
+    const [sessionStarted, setSessionStarted] = useState<boolean>(false);
+    const [chatMode, setChatMode] = useState<'chat' | 'verify'>('chat');
 
     const handleProcessSyllabus = useCallback(async (syllabusFile: File) => {
         setIsLoadingSyllabus(true);
@@ -47,7 +51,9 @@ const App: React.FC = () => {
                 return acc;
             }, {} as KnowledgeState);
             setKnowledgeState(initialKnowledge);
-            setChatHistory([{ role: 'model', content: `Hello! I've analyzed the syllabus for "${className}". What would you like to discuss?` }]);
+            
+            // Initialize tutoring session after syllabus is processed
+            await initializeTutoringSession();
 
         } catch (e: any) {
             setError(e.message || 'Failed to process syllabus.');
@@ -55,6 +61,61 @@ const App: React.FC = () => {
             setIsLoadingSyllabus(false);
         }
     }, [className]);
+
+    const initializeTutoringSession = useCallback(async () => {
+        setIsAiLoading(true);
+        setError(null);
+        try {
+                    const response = await startSession('homework');
+        setProofCode(response.proofCode);
+        setSessionStarted(true);
+            setChatHistory([{ role: 'model', content: response.aiResponse }]);
+        } catch (e: any) {
+            setError(e.message || 'Failed to start tutoring session.');
+        } finally {
+            setIsAiLoading(false);
+        }
+    }, []);
+
+    const handleSendMessage = useCallback(async (message: string) => {
+        setIsAiLoading(true);
+        setError(null);
+        
+        setChatHistory(prev => [...prev, { role: 'user', content: message }]);
+
+        try {
+            const result = await sendMessage(message);
+            setProofCode(result.proofCode);
+            
+            const aiMessage: ChatMessage = {
+                role: 'model',
+                content: result.aiResponse,
+                verification: result.isVerified !== null ? {
+                    verified: result.isVerified,
+                    isComplete: false
+                } : undefined
+            };
+            setChatHistory(prev => [...prev, aiMessage]);
+
+            // Check if we should switch to verification mode
+            if (result.proofCode && result.proofCode.includes('sorry')) {
+                setChatMode('verify');
+            }
+        } catch (e: any) {
+            setError(e.message || 'Failed to send message.');
+            const aiErrorMessage: ChatMessage = { role: 'model', content: "Sorry, I encountered an error processing your message." };
+            setChatHistory(prev => [...prev, aiErrorMessage]);
+        } finally {
+            setIsAiLoading(false);
+        }
+    }, []);
+
+    // Auto-start session when nodes are loaded but no session is started
+    useEffect(() => {
+        if (nodes.length > 0 && !sessionStarted) {
+            initializeTutoringSession();
+        }
+    }, [nodes.length, sessionStarted, initializeTutoringSession]);
 
     const handlePartialKnowledgeStateChange = (nodeId: string, value: Partial<{mu: number, sigma: number}>) => {
         setKnowledgeState(prev => ({ ...prev, [nodeId]: { ...prev[nodeId], ...value } }));
@@ -186,7 +247,9 @@ const App: React.FC = () => {
                             <ChatMentor
                                 history={chatHistory}
                                 isLoading={isAiLoading}
+                                mode={chatMode}
                                 onVerifyStep={handleVerifyProofStep}
+                                onSendMessage={handleSendMessage}
                                 onContextualQuery={handleContextualQuery}
                             />
                         </div>

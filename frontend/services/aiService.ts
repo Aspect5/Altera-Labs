@@ -80,6 +80,7 @@ export const addClassFromSyllabus = async (className: string, syllabusFile: File
   const response = await fetch(`${API_BASE_URL}/add_class`, {
     method: 'POST',
     body: formData,
+    credentials: 'include',
   });
   return handleResponse<AddClassResponse>(response);
 };
@@ -89,6 +90,7 @@ export const getConceptExplanation = async (concept: string, context: string): P
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ concept, context }),
+    credentials: 'include',
   });
   return handleResponse<ExplainConceptResponse>(response);
 };
@@ -98,6 +100,7 @@ export const startSession = async (mode: 'homework' | 'exam'): Promise<StartSess
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mode }),
+      credentials: 'include',
     });
     return handleResponse<StartSessionResponse>(response);
   };
@@ -107,6 +110,7 @@ export const startSession = async (mode: 'homework' | 'exam'): Promise<StartSess
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message }),
+      credentials: 'include',
     });
     return handleResponse<ChatResponse>(response);
   };
@@ -116,6 +120,7 @@ export const finalizeExam = async (knowledgeState: KnowledgeState): Promise<Fina
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ knowledgeState }),
+        credentials: 'include',
     });
     return handleResponse<FinalizeExamResponse>(response);
 };
@@ -132,6 +137,7 @@ export const verifyProofStep = async (proof_state: string, step: string): Promis
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ proof_state, step }),
+        credentials: 'include',
     });
     return handleResponse<VerifyStepResponse>(response);
 };

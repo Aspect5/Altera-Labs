@@ -53,7 +53,7 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ nodes, edges, knowledge
             .attr('width', width)
             .attr('height', height)
             .attr('viewBox', [-width / 2, -height / 2, width, height])
-            .call(d3.zoom().on("zoom", (event: d3.D3ZoomEvent<SVGSVGElement, unknown>) => {
+            .call(d3.zoom<SVGSVGElement, unknown>().on("zoom", (event: d3.D3ZoomEvent<SVGSVGElement, unknown>) => {
                  g.attr("transform", event.transform.toString());
             }));
 
