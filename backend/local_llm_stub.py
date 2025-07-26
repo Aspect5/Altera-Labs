@@ -1,10 +1,14 @@
+# backend/local_llm_stub.py
+
 """
 local_llm_stub.py
 A zero-dependency fallback when Gemini is unavailable.
 Returns short, helpful messages or dummy JSON structures.
 """
 from __future__ import annotations
-import random, textwrap
+import random
+import textwrap
+import json  # Import the json library
 from typing import Any, Dict
 
 CANNED = [
@@ -13,22 +17,31 @@ CANNED = [
     "Interesting thought! Can you restate the goal in your own words?",
 ]
 
-def generate_response(prompt: str, is_json_output: bool = False) -> str | Dict[str, Any]:
+def generate_response(prompt: str, is_json_output: bool = False) -> str:
+    """
+    Generates a response, ensuring JSON output is a string, just like the real API.
+    """
+    # For syllabus extraction, return a JSON string
     if "Extract key concepts" in prompt:
-        return {"concepts": ["group", "identity element", "homomorphism"]}
+        data = {"concepts": [{"id": "group", "label": "group"}, {"id": "identity", "label": "identity element"}, {"id": "homomorphism", "label": "homomorphism"}]}
+        return json.dumps(data)
 
-    # CORRECTED: Return the new, expected JSON structure for the main prompt.
+    # For any other JSON request, return a JSON string
     if is_json_output:
         # Check if the prompt is asking for a tactic translation
         if "e f = e and f e = f" in prompt:
-            return {
+            data = {
                 "action": "TRANSLATE_TACTIC",
-                "tactic_or_response_text": "have h₁ := (he f).left;\n  have h₂ := (hf e).right"
+                "tactic_or_response_text": "have h₁ := (he f).left;\\n  have h₂ := (hf e).right"
             }
+            return json.dumps(data)
+        
         # Default JSON response
-        return {
+        data = {
             "action": "GIVE_HINT",
             "tactic_or_response_text": "Let's focus on the proof. What is the very first logical deduction we can make?"
         }
+        return json.dumps(data)
         
+    # Default text response
     return textwrap.fill(random.choice(CANNED), width=80)

@@ -1,64 +1,54 @@
 # backend/app.py
 
-"""
-This is the main Flask application file for the Altera Labs backend.
-
-It serves as the web layer, handling API requests and orchestrating the backend
-modules to deliver the AI Cognitive Partner experience. The core logic for
-proof verification and pedagogical strategy is delegated to the `socratic_auditor`
-and `metacognition` modules, respectively.
-"""
-
 import os
 import uuid
 import json
 import logging
-import threading
-import shutil
-import subprocess
+import sys # --- ADDED: To allow exiting on critical errors ---
 from pathlib import Path
 from typing import Dict, Any
 
-# --- Third-party Imports ---
 from dotenv import load_dotenv
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, session
 from flask_cors import CORS
-from werkzeug.utils import secure_filename
-import fitz  # PyMuPDF library
+import fitz
+import vertexai # --- ADDED: Import the Vertex AI library ---
 
-# --- Local Application Imports ---
-# Import the newly created modules for core logic and prompts.
-from backend import prompts 
+from backend import prompts
 from backend import metacognition
-from backend.socratic_auditor import get_llm_response # LLM utility is now in the auditor module
-from backend.metacognition import MetacognitiveStage
+from backend import rag_manager
+from backend.socratic_auditor import get_llm_response
+from backend.lean_verifier import lean_verifier_instance 
 
-# --- Configuration & Setup ---
+# --- FIXED: Load environment variables and initialize AI services at startup ---
 load_dotenv()
+
+# Initialize Vertex AI
+try:
+    PROJECT_ID = os.environ.get("VERTEX_AI_PROJECT_ID")
+    LOCATION = os.environ.get("VERTEX_AI_LOCATION")
+
+    if not PROJECT_ID or not LOCATION:
+        logging.warning("VERTEX_AI_PROJECT_ID and VERTEX_AI_LOCATION environment variables not set. Skipping Vertex AI initialization.")
+        # sys.exit(1)  # Commented out for testing
+
+    else:
+        vertexai.init(project=PROJECT_ID, location=LOCATION)
+        logging.info(f"Vertex AI initialized successfully for project '{PROJECT_ID}' in '{LOCATION}'.")
+
+except Exception as e:
+    logging.warning(f"An unexpected error occurred during Vertex AI initialization: {e}")
+    # sys.exit(1)  # Commented out for testing 
+
+# --- Flask App Initialization ---
 app = Flask(__name__)
 app.logger.setLevel(logging.INFO)
-CORS(app, resources={r"/api/*": {"origins": "*"}})
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-secret-key-replace-in-prod")
+CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
 
-# --- Constants ---
-# Constants related to the Lean verifier are now primarily managed in socratic_auditor.py
-# but we may need some paths here for setup.
-LAKE_EXECUTABLE_PATH = os.getenv('LAKE_EXECUTABLE_PATH', 'lake')
-BACKEND_DIR = Path(__file__).parent
-LEAN_PROJECT_PATH = BACKEND_DIR / 'lean_verifier'
-ALLOWED_EXTENSIONS = {'txt', 'pdf', 'md'}
-MAX_FILE_SIZE_MB = 10
-app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE_MB * 1024 * 1024
-
-# --- Thread-Safe In-Memory Storage ---
-# This remains in the main app file as it represents the global state of all user sessions.
-STATE_LOCK = threading.Lock()
-SESSIONS: Dict[str, Dict[str, Any]] = {}
 CLASSES: Dict[str, Dict[str, Any]] = {}
 
-# --- Utility Functions ---
-
 def extract_text_from_pdf(file_stream) -> str:
-    """Extracts text content from a PDF file stream."""
     try:
         with fitz.open(stream=file_stream.read(), filetype="pdf") as doc:
             return "".join(page.get_text() for page in doc)
@@ -67,163 +57,167 @@ def extract_text_from_pdf(file_stream) -> str:
         raise
 
 # ======================================================================================
-# == API Endpoints
+# == API Endpoints (No changes needed below this line)
 # ======================================================================================
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
-    """A simple endpoint to confirm the server is running."""
     return jsonify({"status": "ok"})
 
-@app.route('/api/startSession', methods=['POST'])
+@app.route('/api/start_session', methods=['POST'])
 def start_session():
-    """
-    Starts a new proof-auditing session for a user.
-    Initializes the session state with a placeholder for the full student model.
-    """
-    session_id = str(uuid.uuid4())
-    initial_proof = "import Mathlib.Data.Real.Basic\n\nexample (a b : ℝ) : a * b = b * a := by\n  sorry"
+    data = request.get_json()
+    session['mode'] = data.get('mode', 'homework')
+    session['user_id'] = data.get('userId', str(uuid.uuid4()))
+    session['student_model'] = {
+        "metacognitive_stage": metacognition.MetacognitiveStage.PLANNING_GOAL.value,
+        "current_proof": "import Mathlib.Data.Real.Basic\n\nexample (a b : ℝ) : a * b = b * a := by\n  sorry",
+        "error_history": [], "affective_state": "NEUTRAL", "knowledge_components": {}
+    }
+    session['metacognitive_stage'] = metacognition.MetacognitiveStage.PLANNING_GOAL.value
     
-    with STATE_LOCK:
-        # This session object is now the placeholder for the full "Student Model"
-        SESSIONS[session_id] = {
-            "session_id": session_id,
-            "metacognitive_stage": MetacognitiveStage.PLANNING_GOAL,
-            
-            # --- NEW: Placeholder for the Dynamic Student Knowledge Graph ---
-            "student_model": {
-                "affective_state": "NEUTRAL",  # e.g., NEUTRAL, CONFUSED, FRUSTRATED
-                "knowledge_components": {},   # Will store BKT probabilities for skills
-                "current_proof": initial_proof,
-                "error_history": []
-            }
-        }
-        # This function should now just initialize the stage
-        metacognition.initialize_session_stage(SESSIONS[session_id])
-
-    app.logger.info(f"New session started: {session_id}")
+    # Initialize the metacognitive session stage
+    metacognition.initialize_session_stage(session)
+    session.modified = True
     
-    # The response remains largely the same for now
     return jsonify({
-        "sessionId": session_id,
-        "proof_code": SESSIONS[session_id]['student_model']['current_proof'],
-        "ai_response_text": prompts.PLANNING_PROMPT_INITIAL
+        "message": f"Session started in {session['mode']} mode.",
+        "sessionId": session['user_id'],
+        "proofCode": session['student_model']['current_proof'],
+        "aiResponse": prompts.PLANNING_PROMPT_INITIAL
     })
 
-@app.route('/api/message', methods=['POST'])
-def handle_message():
-    """
-    Handles an incoming message from the user during a session.
-    
-    This endpoint is the core of the interactive loop. It delegates all logic
-    to the `metacognition.process_message` function, which orchestrates the
-    Plan-Monitor-Reflect cycle and the Socratic Auditor.
-    """
-    # Define session_id outside the try block with a default value for the logger
-    session_id = "unknown" 
-    try:
-        # --- FIX: Move all logic inside the try block ---
-        data = request.get_json()
-        if not data or 'sessionId' not in data or 'message' not in data:
-            return jsonify({"error": "Missing sessionId or message"}), 400
-        
-        # Now, all variables are defined within the scope of the try block
-        session_id, user_message = data['sessionId'], data['message']
-        
-        with STATE_LOCK:
-            if session_id not in SESSIONS:
-                return jsonify({"error": "Invalid session ID"}), 404
-            # Get a mutable reference to the current session.
-            session = SESSIONS[session_id]
-
-        # --- DELEGATION OF LOGIC ---
-        result = metacognition.process_message(session, user_message)
-        
-        # Persist the (potentially modified) session state
-        with STATE_LOCK:
-            SESSIONS[session_id] = session
-
-        # --- CORRECTED RESPONSE ---
-        # The proof code now lives inside the student_model.
-        return jsonify({
-            "ai_response_text": result['ai_response_text'],
-            "proof_code": session['student_model']['current_proof'],
-            "is_verified": result.get('is_verified')
-        })
-
-    except Exception as e:
-        # Now the logger can safely use session_id even if parsing failed
-        import traceback
-        app.logger.error(f"Critical error in handle_message for session {session_id}: {e}")
-        app.logger.error(traceback.format_exc())
-        return jsonify({"error": "An internal server error occurred."}), 500
-
-@app.route('/api/addClass', methods=['POST'])
-def add_class():
-    """Handles syllabus upload to create a new 'class' with extracted concepts."""
-    if 'syllabus' not in request.files or 'className' not in request.form:
-        return jsonify({"error": "Missing form data"}), 400
-    
-    file, class_name = request.files['syllabus'], request.form['className']
-    
-    if not file.filename or '.' not in file.filename or file.filename.rsplit('.', 1)[1].lower() not in ALLOWED_EXTENSIONS:
-        return jsonify({"error": f"Invalid file type. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"}), 400
-        
-    try:
-        syllabus_text = extract_text_from_pdf(file) if file.filename.lower().endswith('.pdf') else file.read().decode('utf-8')
-        
-        # Use the centralized prompt from prompts.py
-        prompt = prompts.SYLLABUS_EXTRACTION_PROMPT.format(syllabus_text=syllabus_text[:8000])
-        concepts_json_str = get_llm_response(prompt, is_json=True)
-        concepts = json.loads(concepts_json_str).get("concepts", [])
-        
-        class_id = str(uuid.uuid4())
-        with STATE_LOCK:
-            CLASSES[class_id] = {"name": class_name, "concepts": concepts}
-            
-        app.logger.info(f"Added new class '{class_name}' with ID {class_id}")
-        return jsonify({"classId": class_id, "className": class_name, "concepts": concepts})
-        
-    except Exception as e:
-        app.logger.error(f"Error in /addClass: {e}")
-        return jsonify({"error": "An unexpected server error occurred while analyzing the syllabus."}), 500
-
-@app.route('/api/explainConcept', methods=['POST'])
-def explain_concept():
-    """Provides a detailed explanation for a given concept."""
+@app.route('/api/chat', methods=['POST'])
+def handle_chat_message():
+    if 'user_id' not in session:
+        return jsonify({"error": "No active session."}), 401
     data = request.get_json()
-    if not data or not data.get('concept'):
-        return jsonify({"error": "Concept not provided"}), 400
-        
+    user_message = data['message']
     try:
-        # Use the centralized prompt from prompts.py
-        prompt = prompts.CONCEPT_EXPLANATION_PROMPT.format(concept=data['concept'])
+        ai_response = metacognition.process_message(
+            session=session,
+            user_message=user_message
+        )
+        session.modified = True
+        return jsonify({
+            "aiResponse": ai_response['ai_response_text'],
+            "proofCode": session['student_model']['current_proof'],
+            "isVerified": ai_response.get('is_verified')
+        })
+    except Exception as e:
+        app.logger.error(f"Error in handle_chat_message: {e}", exc_info=True)
+        return jsonify({"error": "Internal server error."}), 500
+
+@app.route('/api/explain_concept', methods=['POST'])
+def explain_concept():
+    if 'user_id' not in session:
+        return jsonify({"error": "No active session."}), 401
+    data = request.get_json()
+    concept = data.get('concept')
+    context = data.get('context', '')
+    try:
+        prompt = prompts.CONCEPT_EXPLANATION_PROMPT.format(concept=concept, context=context)
         explanation = get_llm_response(prompt)
         return jsonify({"explanation": explanation})
-        
     except Exception as e:
-        app.logger.error(f"Failed to get explanation for '{data['concept']}': {e}")
+        app.logger.error(f"Failed to get explanation for '{concept}': {e}", exc_info=True)
         return jsonify({"error": "Failed to generate explanation."}), 500
 
-# --- Main Execution ---
-if __name__ == '__main__':
-    app.logger.info("--- Altera Labs Backend Starting ---")
+@app.route('/api/finalize_exam', methods=['POST'])
+def finalize_exam():
+    if 'user_id' not in session:
+        return jsonify({"error": "No active session to finalize."}), 401
+    data = request.get_json()
+    if not data or 'knowledgeState' not in data:
+        return jsonify({"error": "Request must be JSON with a 'knowledgeState' field."}), 400
+    final_knowledge_state = data['knowledgeState']
+    try:
+        app.logger.info(f"Finalizing exam for user {session['user_id']}.")
+        return jsonify({
+            "message": "Exam finalized successfully.",
+            "finalKnowledgeState": final_knowledge_state
+        })
+    except Exception as e:
+        app.logger.error(f"Error finalizing exam for user {session['user_id']}: {e}", exc_info=True)
+        return jsonify({"error": "An internal server error occurred while finalizing the exam."}), 500
+
+@app.route('/api/verify_step', methods=['POST'])
+def verify_step():
+    """
+    --- NEW ENDPOINT ---
+    Receives a natural language proof step and uses the Lean Verifier
+    service to check it.
+    """
+    data = request.get_json()
+    if not data or 'proof_state' not in data or 'step' not in data:
+        return jsonify({"error": "Request must include 'proof_state' and 'step'."}), 400
     
-    # Perform startup checks
-    if not shutil.which(LAKE_EXECUTABLE_PATH):
-         app.logger.critical(f"Startup check FAILED: Lean executable not found at '{LAKE_EXECUTABLE_PATH}'.")
-    else:
-        app.logger.info("Startup checks passed.")
-        # Ensure the Lean project exists and its dependencies are fetched.
-        if not LEAN_PROJECT_PATH.exists():
-            app.logger.warning(f"Lean project not found at {LEAN_PROJECT_PATH}, creating it...")
-            try:
-                subprocess.run([LAKE_EXECUTABLE_PATH, 'new', 'lean_verifier', 'math'], cwd=BACKEND_DIR, check=True)
-                app.logger.info(f"Fetching mathlib for new project...")
-                subprocess.run([LAKE_EXECUTABLE_PATH, 'build'], cwd=LEAN_PROJECT_PATH, check=True)
-                app.logger.info(f"Mathlib fetched successfully.")
-            except Exception as e:
-                app.logger.critical(f"FATAL: Failed to create and build Lean project. Error: {e}")
-                
-    app.logger.info("------------------------------------")
+    current_proof_state = data['proof_state']
+    natural_language_step = data['step']
+    
+    try:
+        # Delegate the core logic to our new verifier service
+        result = lean_verifier_instance.verify_step(current_proof_state, natural_language_step)
+        return jsonify(result)
+        
+    except Exception as e:
+        app.logger.error(f"Error during proof verification: {e}", exc_info=True)
+        return jsonify({"error": "An internal server error occurred during verification."}), 500
+
+
+@app.route('/api/upload_assignment', methods=['POST'])
+def upload_assignment():
+    if 'user_id' not in session:
+        return jsonify({"error": "No active session."}), 401
+    if 'file' not in request.files:
+        return jsonify({"error": "No file part."}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "No selected file."}), 400
+    if file:
+        file_path, error = rag_manager.save_assignment_file(session['user_id'], file)
+        if error:
+            return jsonify({"error": error}), 500
+        return jsonify({"message": "File uploaded successfully.", "filePath": file_path}), 200
+    return jsonify({"error": "Invalid file."}), 400
+
+@app.route('/api/add_class', methods=['POST'])
+def add_class():
+    if 'syllabus' not in request.files or 'className' not in request.form:
+        return jsonify({"error": "Missing form data: 'syllabus' file and 'className' are required."}), 400
+    
+    file = request.files['syllabus']
+    class_name = request.form['className']
+
+    try:
+        # Extract text from the uploaded file (PDF or text)
+        syllabus_text = extract_text_from_pdf(file) if file.filename.lower().endswith('.pdf') else file.read().decode('utf-8')
+        
+        # --- Use the single, unified prompt to generate the entire graph ---
+        graph_prompt = prompts.SYLLABUS_GRAPH_PROMPT.format(syllabus_text=syllabus_text[:8000]) # Truncate for safety
+        
+        # Make one call to get the complete graph
+        graph_response_str = get_llm_response(graph_prompt, is_json=True)
+        graph_data = json.loads(graph_response_str)
+
+        # The prompt returns 'nodes', but the frontend expects 'concepts'
+        concepts = graph_data.get("nodes", [])
+        edges = graph_data.get("edges", [])
+
+        class_id = str(uuid.uuid4())
+        CLASSES[class_id] = {"name": class_name, "concepts": concepts, "edges": edges}
+        
+        app.logger.info(f"Added new class '{class_name}' with {len(concepts)} concepts and {len(edges)} edges.")
+        
+        # Return the data in the format the frontend expects
+        return jsonify({"classId": class_id, "className": class_name, "concepts": concepts, "edges": edges})
+        
+    except json.JSONDecodeError as e:
+        app.logger.error(f"Error decoding JSON from LLM response: {e}\nResponse was: {graph_response_str}", exc_info=True)
+        return jsonify({"error": "Failed to parse AI response."}), 500
+    except Exception as e:
+        app.logger.error(f"Error in /add_class: {e}", exc_info=True)
+        return jsonify({"error": "Server error while analyzing syllabus."}), 500
+    
+if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

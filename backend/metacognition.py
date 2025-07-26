@@ -33,7 +33,7 @@ def initialize_session_stage(session: Dict[str, Any]) -> None:
     Sets the initial stage for a new session. The full session object
     is now created in app.py to act as the Student Model placeholder.
     """
-    session['metacognitive_stage'] = MetacognitiveStage.PLANNING_GOAL
+    session['metacognitive_stage'] = MetacognitiveStage.PLANNING_GOAL.value
     logging.info(f"Session {session.get('session_id')} initialized. Stage: {session['metacognitive_stage']}.")
 
 def process_message(session: Dict[str, Any], user_message: str) -> Dict[str, Any]:
@@ -60,18 +60,18 @@ def process_message(session: Dict[str, Any], user_message: str) -> Dict[str, Any
         }
 
     # --- Standard Stage Logic ---
-    if current_stage == MetacognitiveStage.PLANNING_GOAL:
-        session['metacognitive_stage'] = MetacognitiveStage.PLANNING_STRATEGY
+    if current_stage == MetacognitiveStage.PLANNING_GOAL.value:
+        session['metacognitive_stage'] = MetacognitiveStage.PLANNING_STRATEGY.value
         return {"ai_response_text": prompts.PLANNING_PROMPT_STRATEGY, "proof_code": session['student_model']['current_proof']}
 
-    elif current_stage == MetacognitiveStage.PLANNING_STRATEGY:
-        session['metacognitive_stage'] = MetacognitiveStage.MONITORING
+    elif current_stage == MetacognitiveStage.PLANNING_STRATEGY.value:
+        session['metacognitive_stage'] = MetacognitiveStage.MONITORING.value
         return {"ai_response_text": prompts.MONITORING_PROMPT_START, "proof_code": session['student_model']['current_proof']}
 
-    elif current_stage == MetacognitiveStage.MONITORING:
+    elif current_stage == MetacognitiveStage.MONITORING.value:
         return handle_monitoring_stage(session, user_message)
     
-    elif current_stage == MetacognitiveStage.REFLECTION:
+    elif current_stage == MetacognitiveStage.REFLECTION.value:
         return {
             "ai_response_text": prompts.REFLECTION_PROMPT_CLOSING,
             "proof_code": session['student_model']['current_proof'],

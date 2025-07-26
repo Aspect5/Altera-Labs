@@ -1,222 +1,66 @@
 # backend/prompts.py
 
 """
-This module centralizes all prompts used to interact with the Large Language Model (LLM).
-Separating prompts from application logic is a best practice that allows for easier
-management, tuning, and maintenance of the AI's behavior.
-
-The prompts are designed to be modular and are formatted as f-strings to allow for
-dynamic insertion of contextual information like the current proof state or user messages.
+This file contains all the prompt templates used for interacting with the LLM.
 """
 
-# ======================================================================================
-# == PROMPTS FOR THE SOCRATIC AUDITOR (Verification Loop)
-# ======================================================================================
+# A single, unified prompt to generate a complete knowledge graph from a syllabus.
+SYLLABUS_GRAPH_PROMPT = """
+You are an expert in educational theory and computer science. Your task is to analyze the provided course syllabus and construct an educational knowledge graph.
 
-INTENT_PROMPT = """
-Analyze the user's message in the context of a formal proof session in Lean 4.
-Your primary goal is to determine the user's specific intent. Classify the intent
-into one of the following categories:
+1.  **Extract Key Concepts:** Identify the main technical topics or concepts from the syllabus. These will be the **nodes** of your graph. Create a unique, simple `id` (snake_case) and a clean, human-readable `label` for each concept. You MUST ignore administrative terms like "homework," "exam," "office hours," etc.
 
-- "PROOF_STEP": The user is proposing a direct, formal Lean tactic.
-  (e.g., "rw [mul_comm]", "apply mul_comm", "exact h", "intro h").
-- "CONCEPTUAL_STEP": The user is describing a logical step in natural language.
-  (e.g., "use the commutativity of multiplication", "we know a * b = b * a", "by definition of even numbers").
-- "QUESTION": The user is asking for a definition, a hint, or about the state of the proof.
-  (e.g., "what does 'ℝ' mean?", "what should I do next?", "can you explain that error?").
-- "META_COMMENT": The user is making a general comment that is not directly related to the proof logic.
-  (e.g., "this is hard", "one moment", "test", "that's interesting").
+2.  **Determine Prerequisites:** Analyze the text to find prerequisite relationships. Words like "builds upon," "requires," or sequential ordering (e.g., Week 2 topics are prerequisites for Week 3) indicate a relationship. These will be the **edges** of your graph.
 
-User Message: "{user_message}"
+3.  **Assign Weights:** For each prerequisite relationship (edge), assign a numerical **weight** from 0.0 to 1.0.
+    * A weight of **0.9-1.0** means it's a **hard prerequisite** (e.g., you cannot understand 'Derivatives' without 'Limits').
+    * A weight of **0.4-0.7** means it's a **strong suggestion**.
+    * A weight of **0.1-0.3** means it's a **weakly related** concept.
 
-Respond with a single, valid JSON object containing one key, "intent", with the
-classification as its value. For example: {{"intent": "CONCEPTUAL_STEP"}}
-"""
-
-TACTIC_GENERATION_PROMPT = """
-You are an expert in the Lean 4 proof assistant. Your task is to translate a user's
-natural language statement into a single, valid Lean 4 tactic.
-
-- Respond ONLY with a valid JSON object containing a single key "tactic".
-- The value of "tactic" should be the Lean 4 code as a string.
-- If the user's statement is a conceptual idea that does not map directly to a
-  single tactic (e.g., "I think we need to show..."), the value of "tactic" should be null.
-
-Current Proof State:
-```lean
-{proof_state}
-```
-
-User's statement: "{user_message}"
-
-JSON response:
-"""
-
-SOCRATIC_HINT_PROMPT = """
-You are a university mathematics professor acting as a Socratic tutor for the
-Lean 4 proof assistant. A student's proof tactic has failed. Your goal is to
-provide a helpful hint that guides them to the correct answer without giving it away.
-
-1.  **Analyze the Error**: Look at the student's goal, the tactic they tried, and the
-    technical error message from the Lean compiler.
-2.  **Explain Conceptually**: Explain the *reason* for the error in simple, conceptual
-    terms. Avoid technical jargon. For example, instead of "type mismatch", say
-    "it looks like you're trying to use a property that applies to whole numbers on a real number."
-3.  **Ask a Guiding Question**: End your response with a question that prompts the
-    student to think about the underlying mathematical concept or a different strategy.
-4.  **Do NOT provide the correct code or tactic.**
-
-Current Proof State (the student's goal):
-```lean
-{proof_state}
-```
-
-Student's failed tactic: `{tactic}`
-
-Lean Compiler Error:
-```
-{error_message}
-```
-
-Your Socratic hint:
-"""
-
-CONCEPTUAL_GUIDANCE_PROMPT = """
-You are an AI assistant and expert in Lean 4. The user has described a correct
-conceptual idea for the proof, but not a formal tactic. Your role is to validate
-their thinking and gently guide them toward the formal Lean 4 tactic that
-implements their idea.
-
-- Acknowledge that their idea is on the right track.
-- Hint at the name of the tactic or the structure of the command that would
-  achieve their goal.
-
-Current Proof State:
-```lean
-{proof_state}
-```
-
-Student's idea: "{user_message}"
-
-Your guidance (e.g., "That's exactly the right idea! In Lean, you can apply that property using the 'rewrite' tactic, which is often abbreviated as 'rw'. How would you use that here?"):
-"""
-
-
-# ======================================================================================
-# == PROMPTS FOR GENERAL CHAT & ONBOARDING
-# ======================================================================================
-
-GENERAL_CHAT_PROMPT = """
-You are an AI assistant helping a student with a formal proof in Lean 4. The
-student is asking a question or making a comment that is not a proof step.
-Provide a helpful, encouraging, and conversational response.
-
-Current Proof State:
-```lean
-{proof_state}
-```
-
-Student's message: "{user_message}"
-
-Your response:
-"""
-
-SYLLABUS_EXTRACTION_PROMPT = """
-From the syllabus text provided below, extract the 5-10 most important,
-substantive concepts for the course. Focus on key topics, theories, or methods.
-
-- Return a single JSON object with one key: "concepts".
-- The value of "concepts" should be an array of strings.
-
-Example: {{"concepts": ["Group Theory", "Ring Homomorphisms", "Field Extensions"]}}
+- You MUST return a single JSON object containing two keys: "nodes" and "edges".
+- If no concepts or edges are found, return empty lists.
 
 Syllabus Text:
 ---
 {syllabus_text}
 ---
-
-JSON response:
 """
 
+# Prompt used in app.py for concept explanations
 CONCEPT_EXPLANATION_PROMPT = """
-You are a university mathematics professor. Provide a clear, concise, and
-intuitive explanation of the following concept.
+Explain the following mathematical concept in a clear and concise way.
+The user selected this text while viewing the provided context.
+Use markdown for formatting and LaTeX for mathematical notation.
 
-- Use LaTeX for all mathematical notation (e.g., $inline$ and $$block$$).
-- Aim for an explanation that would be suitable for an undergraduate student
-  seeing this topic for the first time.
+Concept: "{concept}"
 
-Concept: **{concept}**
+Context:
+---
+{context}
+---
 """
 
+# Prompts used in metacognition.py for the tutoring flow
+PLANNING_PROMPT_INITIAL = "Hello! We're about to start a proof. First, let's make sure we understand the goal. In your own words, what are we trying to prove?"
 
+PLANNING_PROMPT_STRATEGY = "Great. Now, what's our overall strategy? What key definitions or theorems do you think will be important here?"
 
+MONITORING_PROMPT_START = "Excellent plan. Let's begin the proof. What is your first logical step?"
 
+REFLECTION_PROMPT_SUCCESS = "Fantastic work! The proof is complete. Let's reflect. What was the most challenging part of this proof for you?"
 
-# This prompt instructs the LLM to act as a Socratic guide when the user
-# says something that isn't a formal proof tactic. It is designed to
-# generate a non-deterministic, context-aware, and helpful response.
+REFLECTION_PROMPT_CLOSING = "Thank you for the feedback. This session is now complete."
+
+# Prompt for providing dynamic help when a user is stuck or frustrated
 DYNAMIC_HELPER_PROMPT = """
-You are an AI assistant in a Socratic tutoring system for the Lean 4 proof assistant.
-Your current role is to act as an empathetic and intelligent guide.
+A student is working on a proof and seems to be stuck or frustrated.
+Their current proof state and their latest message are below.
+Provide a Socratic, encouraging hint to help them get unstuck. Do not give the answer directly.
+Ask a question that guides them to the next logical step.
 
-The user is in the middle of a proof and was expected to provide a formal Lean tactic.
-Instead, they said something conversational, emotional, or confusing.
-
-**Your Task:**
-Generate a short, helpful, and non-robotic response. Do NOT generate a formal proof tactic.
-Your response should:
-1. Acknowledge the user's message in a natural way.
-2. Gently remind them that a formal tactic is expected in this phase.
-3. Offer help or a way forward without being repetitive.
-
-**Current Proof State:**
+Proof State:
 ```lean
 {proof_code}
-````
-
-**User's Message:**
-"{user\_message}"
-
-**Example of a good response:**
-"It sounds like you might be feeling a bit stuck. That's totally normal. Right now, I'm set up to process formal Lean tactics like `rw` or `intro`. If you're not sure what to do next, we could try thinking about the goal and outlining a small step to get there. What do you think?"
-
-**Your AI-generated response:**
+User Message: "{user_message}"
+```
 """
-
-# ======================================================================================
-# == PROMPTS FOR METACOGNITIVE SCAFFOLDING (Future Implementation)
-# ======================================================================================
-
-# These prompts are based on the "Plan-Monitor-Reflect" cycle described in the
-# Altera Labs research documents.
-
-PLANNING_PROMPT_INITIAL = """
-Welcome to the Proof Auditor! Before we begin writing the formal proof, let's
-make a plan. In your own words, what is the main goal of this proof? What are
-we trying to show?
-"""
-
-PLANNING_PROMPT_STRATEGY = """
-That's a great summary of the goal. Now, what's your initial strategy?
-How do you think we should start? Don't worry about formal code yet, just
-describe your first logical step.
-"""
-
-REFLECTION_PROMPT_SUCCESS = """
-Excellent work, the proof is complete! Let's take a moment to reflect.
-
-- What was the key insight or the most critical step in this proof?
-- Could this proof have been done a different way?
-"""
-
-REFLECTION_PROMPT_ASSIST = """
-Great job, we got there! Let's take a moment to reflect on the process.
-
-- Which step was the most challenging, and what did you learn from it?
-- What's the main takeaway from this exercise that you can apply to future proofs?
-"""
-
-MONITORING_PROMPT_START = "That sounds like a solid plan. Let's get started!\n\nWhat is the first formal step or tactic you'd like to try?"
-
-REFLECTION_PROMPT_TACTIC_FAILURE = "I'm not sure how to turn that into a formal proof step. Could you try rephrasing it as a command or tactic?\n\nFor example, you could try a tactic like `intro` to introduce hypotheses, or `rw` to rewrite a goal."
