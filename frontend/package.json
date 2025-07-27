@@ -17,7 +17,8 @@
     "katex": "^0.16.22",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "react-katex": "^3.1.0"
+    "react-katex": "^3.1.0",
+    "react-router-dom": "^7.7.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.29.0",

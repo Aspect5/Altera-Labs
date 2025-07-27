@@ -40,6 +40,7 @@ interface AddClassResponse {
   className: string;
   concepts: GraphNode[];
   edges: Edge[]; // Assuming backend will eventually provide this
+  solutionStatus: 'SOLVED' | 'FAILED' | 'SYLLABUS_BASED'; // For Proving Agent feedback
 }
 
 // --- NEW: Type definition for the verifier service ---
@@ -72,14 +73,25 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
 // --- Service Functions ---
 
-export const addClassFromSyllabus = async (className: string, syllabusFile: File): Promise<AddClassResponse> => {
+// UPDATED: Renamed and modified to handle both syllabus and homework
+export const createClass = async (
+  className: string,
+  syllabusFile: File | null,
+  homeworkFile: File | null
+): Promise<AddClassResponse> => {
   const formData = new FormData();
   formData.append('className', className);
-  formData.append('syllabus', syllabusFile);
+  if (syllabusFile) {
+    formData.append('syllabus', syllabusFile);
+  }
+  if (homeworkFile) {
+    formData.append('homework', homeworkFile);
+  }
 
   const response = await fetch(`${API_BASE_URL}/add_class`, {
     method: 'POST',
     body: formData,
+    credentials: 'include',
   });
   return handleResponse<AddClassResponse>(response);
 };
@@ -89,6 +101,7 @@ export const getConceptExplanation = async (concept: string, context: string): P
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ concept, context }),
+    credentials: 'include',
   });
   return handleResponse<ExplainConceptResponse>(response);
 };
@@ -98,17 +111,23 @@ export const startSession = async (mode: 'homework' | 'exam'): Promise<StartSess
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mode }),
+      credentials: 'include',
     });
     return handleResponse<StartSessionResponse>(response);
   };
   
   export const sendMessage = async (message: string): Promise<ChatResponse> => {
+    console.log('aiService: Sending message to /api/chat:', message);
     const response = await fetch(`${API_BASE_URL}/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message }),
+      credentials: 'include',
     });
-    return handleResponse<ChatResponse>(response);
+    console.log('aiService: Raw response status:', response.status);
+    const data = await handleResponse<ChatResponse>(response);
+    console.log('aiService: Parsed response data:', data);
+    return data;
   };
 
 export const finalizeExam = async (knowledgeState: KnowledgeState): Promise<FinalizeExamResponse> => {
@@ -116,6 +135,7 @@ export const finalizeExam = async (knowledgeState: KnowledgeState): Promise<Fina
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ knowledgeState }),
+        credentials: 'include',
     });
     return handleResponse<FinalizeExamResponse>(response);
 };
@@ -132,6 +152,7 @@ export const verifyProofStep = async (proof_state: string, step: string): Promis
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ proof_state, step }),
+        credentials: 'include',
     });
     return handleResponse<VerifyStepResponse>(response);
 };
