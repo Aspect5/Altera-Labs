@@ -203,6 +203,78 @@
         "target": "classification_of_wallpaper_groups",
         "weight": 0.7
       }
-    ]
+    ],
+    "knowledgeState": {
+      "abstract_algebra": {
+        "mu": 0.058873870870254974,
+        "sigma": 0.46781836242232033
+      },
+      "cauchys_theorem": {
+        "mu": 0.2974745211924311,
+        "sigma": 0.4968938003070965
+      },
+      "classification_of_finite_abelian_groups": {
+        "mu": 0.9068981427572378,
+        "sigma": 0.11552181136733908
+      },
+      "classification_of_wallpaper_groups": {
+        "mu": 0.27959251340683067,
+        "sigma": 0.45783594030698693
+      },
+      "dihedral_groups": {
+        "mu": 0.5948092362598623,
+        "sigma": 0.38568396720915865
+      },
+      "finite_rotation_groups": {
+        "mu": 0.7307156782585029,
+        "sigma": 0.4612158193812711
+      },
+      "geometric_symmetry_groups": {
+        "mu": 0.8501537549206971,
+        "sigma": 0.18971689214227708
+      },
+      "group_theory": {
+        "mu": 0.46840764485209674,
+        "sigma": 0.31858554174321974
+      },
+      "groups": {
+        "mu": 0.18974171317652733,
+        "sigma": 0.3402399481784025
+      },
+      "homomorphisms": {
+        "mu": 0.8801637207598223,
+        "sigma": 0.28702567172721616
+      },
+      "lagranges_theorem": {
+        "mu": 0.9981675898856041,
+        "sigma": 0.3566902462774665
+      },
+      "matrix_groups": {
+        "mu": 0.6085526397261118,
+        "sigma": 0.4449219788499479
+      },
+      "orbit_counting_techniques": {
+        "mu": 0.5280115337079729,
+        "sigma": 0.1855648193752699
+      },
+      "permutation_groups": {
+        "mu": 0.11968603644023323,
+        "sigma": 0.28810681831517804
+      },
+      "proofs": {
+        "mu": 0.49006423052449544,
+        "sigma": 0.36594461183870286
+      },
+      "quotients": {
+        "mu": 0.22102524489829878,
+        "sigma": 0.3339405410716242
+      },
+      "subgroups": {
+        "mu": 0.7478452736252601,
+        "sigma": 0.28505862660025116
+      }
+    },
+    "lastSession": "2025-07-27T03:35:19.922998",
+    "updatedAt": "2025-07-27T03:35:19.923007"
   }
 }

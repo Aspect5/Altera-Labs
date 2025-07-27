@@ -1,0 +1,90 @@
+{
+  "summary": {
+    "total_tests": 6,
+    "successful_tests": 1,
+    "failed_tests": 5,
+    "success_rate": 16.666666666666664,
+    "total_time": 946.009459733963,
+    "average_time_per_test": 157.66786015033722,
+    "min_time": 15.178004026412964,
+    "max_time": 301.09710335731506,
+    "average_attempts": 6.333333333333333,
+    "max_attempts": 10
+  },
+  "difficulty_breakdown": {
+    "hard": {
+      "count": 3,
+      "success": 0,
+      "total_time": 401.94397711753845,
+      "success_rate": 0.0,
+      "avg_time": 133.98132570584616
+    },
+    "very_hard": {
+      "count": 3,
+      "success": 1,
+      "total_time": 544.0631837844849,
+      "success_rate": 33.33333333333333,
+      "avg_time": 181.35439459482828
+    }
+  },
+  "bottlenecks": {
+    "primary_bottleneck": "Slow execution time",
+    "slow_tests": [
+      [
+        "Exponential Properties",
+        97.42073154449463
+      ],
+      [
+        "Binomial Theorem",
+        208.0026149749756
+      ],
+      [
+        "De Morgan's Law",
+        227.78807640075684
+      ],
+      [
+        "Double Negation",
+        96.52063059806824
+      ],
+      [
+        "Group Identity Uniqueness",
+        301.09710335731506
+      ]
+    ],
+    "high_attempt_tests": [
+      [
+        "Binomial Theorem",
+        8
+      ],
+      [
+        "De Morgan's Law",
+        10
+      ],
+      [
+        "Double Negation",
+        6
+      ],
+      [
+        "Group Identity Uniqueness",
+        8
+      ]
+    ],
+    "optimization_opportunities": [
+      "Optimize Lean verification process",
+      "Implement proof caching"
+    ]
+  },
+  "error_analysis": {
+    "total_errors": 5,
+    "common_error_patterns": {},
+    "error_by_difficulty": {
+      "hard": 3,
+      "very_hard": 2
+    },
+    "error_by_category": {
+      "arithmetic": 2,
+      "logic": 2,
+      "group_theory": 1
+    }
+  }
+}

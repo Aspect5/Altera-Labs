@@ -17,9 +17,9 @@ from enum import Enum, auto
 from typing import Dict, Any
 
 # --- Local Application Imports ---
-from . import prompts
-from . import socratic_auditor
-from . import state_analyzer
+import prompts
+import socratic_auditor
+import state_analyzer
 
 class MetacognitiveStage(Enum):
     """Defines the high-level stages of the pedagogical loop."""

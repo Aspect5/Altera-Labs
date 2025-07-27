@@ -1,0 +1,740 @@
+[
+  {
+    "timestamp": "2025-07-27T18:46:03.274165",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 1,
+      "tactic": "exact True.intro",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmpmjh_t7_d.lean:6:2: error: type mismatch\n  True.intro\nhas type\n  True : Prop\nbut is expected to have type\n  \u2200 (n : \u2115), n + 0 = n : Prop\n",
+      "llm_time": 6.578754901885986,
+      "verify_time": 5.494176864624023,
+      "total_time": 12.073778867721558,
+      "strategy": "generic"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T18:46:10.485840",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 2,
+      "tactic": "rfl",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmpgymdw_g2.lean:6:2: error: tactic 'rfl' failed, expected goal to be a binary relation\n\u22a2 \u2200 (n : \u2115), n + 0 = n\n",
+      "llm_time": 1.8989629745483398,
+      "verify_time": 5.311109304428101,
+      "total_time": 19.28545379638672,
+      "strategy": "generic"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T18:46:23.628933",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 3,
+      "tactic": "exact Nat.add_zero",
+      "success": true,
+      "llm_time": 7.958473205566406,
+      "verify_time": 5.182781934738159,
+      "total_time": 32.428542137145996,
+      "strategy": "generic"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T18:52:28.692580",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 1,
+      "tactic": "exact True.intro by_contra h",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmprwxegzxh.lean:6:8: error: Function expected at\n  True.intro\nbut this term has type\n  True\n\nNote: Expected a function because this term is being applied to the argument\n  by_contra\n",
+      "llm_time": 23.46520757675171,
+      "verify_time": 6.036447048187256,
+      "total_time": 29.503029823303223,
+      "strategy": "generic"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T18:52:36.569549",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 2,
+      "tactic": "exact True.intro",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmp2tut3ud_.lean:6:2: error: type mismatch\n  True.intro\nhas type\n  True : Prop\nbut is expected to have type\n  \u2200 (n : \u2115), n + 0 = n : Prop\n",
+      "llm_time": 2.4597368240356445,
+      "verify_time": 5.415359973907471,
+      "total_time": 37.379997968673706,
+      "strategy": "generic"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T18:52:48.582538",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 3,
+      "tactic": "intro n",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmpx8n59al4.lean:5:43: error: unsolved goals\nn : \u2115\n\u22a2 n + 0 = n\n",
+      "llm_time": 6.0836334228515625,
+      "verify_time": 5.927023649215698,
+      "total_time": 49.392985820770264,
+      "strategy": "generic"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T18:52:59.206941",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 4,
+      "tactic": "intro n",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmpgr0rrkv_.lean:5:43: error: unsolved goals\nn : \u2115\n\u22a2 n + 0 = n\n",
+      "llm_time": 5.030057191848755,
+      "verify_time": 5.591660022735596,
+      "total_time": 60.01738953590393,
+      "strategy": "generic"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T18:53:10.810186",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 5,
+      "tactic": "intro n",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmpb3s88ltl.lean:5:43: error: unsolved goals\nn : \u2115\n\u22a2 n + 0 = n\n",
+      "llm_time": 3.9968535900115967,
+      "verify_time": 7.6041340827941895,
+      "total_time": 71.62063503265381,
+      "strategy": "generic"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:02:23.346342",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 1,
+      "tactic": "rfl simp norm_num",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmpkssppupw.lean:6:2: error: tactic 'rfl' failed, expected goal to be a binary relation\n\u22a2 \u2200 (n : \u2115), n + 0 = n\n/workspaces/Altera-Labs/backend/lean_verifier/tmpkssppupw.lean:6:6: error: unexpected identifier; expected command\n",
+      "llm_time": 22.426355838775635,
+      "verify_time": 33.091633558273315,
+      "total_time": 75.62253880500793,
+      "strategy": "generic"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:02:56.699177",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 2,
+      "tactic": "rfl",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmpk1h75s4c.lean:6:2: error: tactic 'rfl' failed, expected goal to be a binary relation\n\u22a2 \u2200 (n : \u2115), n + 0 = n\n",
+      "llm_time": 1.623718500137329,
+      "verify_time": 31.720273733139038,
+      "total_time": 108.97533965110779,
+      "strategy": "generic"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:03:37.963538",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 3,
+      "tactic": "norm_num",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmpiltacp6g.lean:6:3: error: unknown tactic\n/workspaces/Altera-Labs/backend/lean_verifier/tmpiltacp6g.lean:5:43: error: unsolved goals\n\u22a2 \u2200 (n : \u2115), n + 0 = n\n",
+      "llm_time": 9.325420141220093,
+      "verify_time": 31.932843446731567,
+      "total_time": 150.23973655700684,
+      "strategy": "generic"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:04:55.098505",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 1,
+      "tactic": "intro n",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmprkmpcmdf.lean:5:43: error: unsolved goals\nn : \u2115\n\u22a2 n + 0 = n\n",
+      "llm_time": 5.727604627609253,
+      "verify_time": 41.2761332988739,
+      "total_time": 77.12815928459167,
+      "strategy": "addition_identity"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:05:38.735236",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 2,
+      "tactic": "intro n",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmpehhzs2ap.lean:5:43: error: unsolved goals\nn : \u2115\n\u22a2 n + 0 = n\n",
+      "llm_time": 2.9645097255706787,
+      "verify_time": 40.668943643569946,
+      "total_time": 120.76487517356873,
+      "strategy": "addition_identity"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:06:24.385502",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 3,
+      "tactic": "intro n",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmplohl5m0x.lean:5:43: error: unsolved goals\nn : \u2115\n\u22a2 n + 0 = n\n",
+      "llm_time": 5.050606966018677,
+      "verify_time": 40.594701528549194,
+      "total_time": 166.41513419151306,
+      "strategy": "addition_identity"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:08:06.621459",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 1,
+      "tactic": "intro a b",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmp5jm_9ocx.lean:6:10: error: tactic 'introN' failed, insufficient number of binders\na : \u2115\n\u22a2 a + 0 = a\n",
+      "llm_time": 29.06387948989868,
+      "verify_time": 43.03030014038086,
+      "total_time": 102.23272323608398,
+      "strategy": "commutativity"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:08:51.505276",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 2,
+      "tactic": "intro a b exact Nat.add_comm a b",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmpe9hswg6l.lean:6:10: error: tactic 'introN' failed, insufficient number of binders\na : \u2115\n\u22a2 a + 0 = a\n",
+      "llm_time": 2.199498176574707,
+      "verify_time": 42.679205894470215,
+      "total_time": 147.11656522750854,
+      "strategy": "commutativity"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:09:43.923052",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 3,
+      "tactic": "intro a",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmpc5zwim5t.lean:5:43: error: unsolved goals\na : \u2115\n\u22a2 a + 0 = a\n",
+      "llm_time": 10.565207719802856,
+      "verify_time": 41.848262786865234,
+      "total_time": 199.53434824943542,
+      "strategy": "commutativity"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:11:24.636219",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 1,
+      "tactic": "intro a b induction b with | zero => simp [Nat.mul_zero, Nat.zero_mul] | succ k ih => rw [Nat.mul_succ, Nat.succ_mul] rw [ih] rfl intro a b ring",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmp6i1e1lt4.lean:6:10: error: tactic 'introN' failed, insufficient number of binders\na : \u2115\n\u22a2 a + 0 = a\n/workspaces/Altera-Labs/backend/lean_verifier/tmp6i1e1lt4.lean:6:24: error: unexpected token 'with'; expected command\n",
+      "llm_time": 27.102420568466187,
+      "verify_time": 43.438560962677,
+      "total_time": 100.70886063575745,
+      "strategy": "generic"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:12:21.190550",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 2,
+      "tactic": "intro a b",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmpg2_3h0sw.lean:6:10: error: tactic 'introN' failed, insufficient number of binders\na : \u2115\n\u22a2 a + 0 = a\n",
+      "llm_time": 13.419189214706421,
+      "verify_time": 43.12866401672363,
+      "total_time": 157.26320338249207,
+      "strategy": "generic"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:13:12.986163",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 3,
+      "tactic": "intro a b",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmpr9oryikl.lean:6:10: error: tactic 'introN' failed, insufficient number of binders\na : \u2115\n\u22a2 a + 0 = a\n",
+      "llm_time": 8.548234701156616,
+      "verify_time": 43.242624282836914,
+      "total_time": 209.05881357192993,
+      "strategy": "generic"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:14:58.262957",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 1,
+      "tactic": "intro a b c induction c with | zero => simp [Nat.add_zero] | succ c_n ih => simp [Nat.add_succ, ih] intro a b c ring",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmp3ehs9iab.lean:6:10: error: tactic 'introN' failed, insufficient number of binders\na : \u2115\n\u22a2 a + 0 = a\n/workspaces/Altera-Labs/backend/lean_verifier/tmp3ehs9iab.lean:6:26: error: unexpected token 'with'; expected command\n",
+      "llm_time": 13.75777292251587,
+      "verify_time": 51.34799909591675,
+      "total_time": 105.27145767211914,
+      "strategy": "generic"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:16:20.937033",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 2,
+      "tactic": "intro a b c induction a with | zero => simp",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmpf75arvw2.lean:6:10: error: tactic 'introN' failed, insufficient number of binders\na : \u2115\n\u22a2 a + 0 = a\n/workspaces/Altera-Labs/backend/lean_verifier/tmpf75arvw2.lean:6:26: error: unexpected token 'with'; expected command\n",
+      "llm_time": 30.26326274871826,
+      "verify_time": 52.40585207939148,
+      "total_time": 187.9454996585846,
+      "strategy": "generic"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:17:24.244666",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 3,
+      "tactic": "intro a b c induction a with | zero => simp [Nat.zero_add] | succ k ih => simp [Nat.succ_add]",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmpt02au5vm.lean:6:10: error: tactic 'introN' failed, insufficient number of binders\na : \u2115\n\u22a2 a + 0 = a\n/workspaces/Altera-Labs/backend/lean_verifier/tmpt02au5vm.lean:6:26: error: unexpected token 'with'; expected command\n",
+      "llm_time": 12.01741075515747,
+      "verify_time": 51.28334403038025,
+      "total_time": 251.25315976142883,
+      "strategy": "generic"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:19:03.797684",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 1,
+      "tactic": "rfl simp norm_num",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmpvmgcwqeo.lean:6:2: error: tactic 'rfl' failed, expected goal to be a binary relation\n\u22a2 \u2200 (n : \u2115), n + 0 = n\n/workspaces/Altera-Labs/backend/lean_verifier/tmpvmgcwqeo.lean:6:6: error: unexpected identifier; expected command\n",
+      "llm_time": 7.07332181930542,
+      "verify_time": 52.311413049697876,
+      "total_time": 99.54939699172974,
+      "strategy": "generic"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:19:56.930327",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 2,
+      "tactic": "rfl",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmp86jxp4m6.lean:6:2: error: tactic 'rfl' failed, expected goal to be a binary relation\n\u22a2 \u2200 (n : \u2115), n + 0 = n\n",
+      "llm_time": 1.481079339981079,
+      "verify_time": 51.647449254989624,
+      "total_time": 152.68203949928284,
+      "strategy": "generic"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:20:53.808885",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 3,
+      "tactic": "norm_num",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmp0icuev09.lean:6:3: error: unknown tactic\n/workspaces/Altera-Labs/backend/lean_verifier/tmp0icuev09.lean:5:43: error: unsolved goals\n\u22a2 \u2200 (n : \u2115), n + 0 = n\n",
+      "llm_time": 4.053048610687256,
+      "verify_time": 52.8203706741333,
+      "total_time": 209.56057739257812,
+      "strategy": "generic"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:22:29.384671",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 1,
+      "tactic": "intro n",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmp0lrxps14.lean:5:43: error: unsolved goals\nn : \u2115\n\u22a2 n + 0 = n\n",
+      "llm_time": 6.81163477897644,
+      "verify_time": 48.53149724006653,
+      "total_time": 95.56698203086853,
+      "strategy": "addition_identity"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:22:58.700204",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 2,
+      "tactic": "intro n",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmp0lrxps14.lean:5:43: error: unsolved goals\nn : \u2115\n\u22a2 n + 0 = n\n",
+      "llm_time": 1.9508090019226074,
+      "verify_time": 27.361809730529785,
+      "total_time": 124.88251495361328,
+      "strategy": "addition_identity"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:23:01.854559",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 3,
+      "tactic": "intro n",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmp0lrxps14.lean:5:43: error: unsolved goals\nn : \u2115\n\u22a2 n + 0 = n\n",
+      "llm_time": 3.1500916481018066,
+      "verify_time": 0.00035262107849121094,
+      "total_time": 128.03686785697937,
+      "strategy": "addition_identity"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:23:35.033760",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 1,
+      "tactic": "intro a b",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmppp__jwxa.lean:6:10: error: tactic 'introN' failed, insufficient number of binders\na : \u2115\n\u22a2 a + 0 = a\n",
+      "llm_time": 27.06866717338562,
+      "verify_time": 6.103860378265381,
+      "total_time": 33.173524379730225,
+      "strategy": "commutativity"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:23:43.286294",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 2,
+      "tactic": "intro a b exact Nat.add_comm a b",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmpv5ynpr23.lean:6:10: error: tactic 'introN' failed, insufficient number of binders\na : \u2115\n\u22a2 a + 0 = a\n",
+      "llm_time": 1.9392106533050537,
+      "verify_time": 6.310015678405762,
+      "total_time": 41.42605710029602,
+      "strategy": "commutativity"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:24:06.222474",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 3,
+      "tactic": "intro a b induction b with | zero => simp [Nat.add_zero, Nat.zero_add] | succ k ih => rw [Nat.add_succ, ih, Nat.succ_add]",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmpkting1tw.lean:6:10: error: tactic 'introN' failed, insufficient number of binders\na : \u2115\n\u22a2 a + 0 = a\n/workspaces/Altera-Labs/backend/lean_verifier/tmpkting1tw.lean:6:24: error: unexpected token 'with'; expected command\n",
+      "llm_time": 16.826338052749634,
+      "verify_time": 6.104688405990601,
+      "total_time": 64.36223554611206,
+      "strategy": "commutativity"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:24:39.813203",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 1,
+      "tactic": "intro a b induction b with | zero => rw [Nat.mul_zero, Nat.zero_mul] | succ k ih => rw [Nat.mul_succ, Nat.succ_mul] rw [ih] rfl intro a b induction a with | zero => rw [Nat.zero_mul, Nat.mul_zero] | succ k ih => rw [Nat.succ_mul, Nat.mul_succ] rw [ih] rfl intro a b ring",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmpcbs3c_4n.lean:6:10: error: tactic 'introN' failed, insufficient number of binders\na : \u2115\n\u22a2 a + 0 = a\n/workspaces/Altera-Labs/backend/lean_verifier/tmpcbs3c_4n.lean:6:24: error: unexpected token 'with'; expected command\n",
+      "llm_time": 22.259557723999023,
+      "verify_time": 11.324682474136353,
+      "total_time": 33.58652067184448,
+      "strategy": "generic"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:24:54.675024",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 2,
+      "tactic": "intro a b",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmppp__jwxa.lean:6:10: error: tactic 'introN' failed, insufficient number of binders\na : \u2115\n\u22a2 a + 0 = a\n",
+      "llm_time": 14.855530500411987,
+      "verify_time": 0.00023436546325683594,
+      "total_time": 48.4483540058136,
+      "strategy": "generic"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:25:12.156069",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 3,
+      "tactic": "intro a",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmpphd6cjo_.lean:5:43: error: unsolved goals\na : \u2115\n\u22a2 a + 0 = a\n",
+      "llm_time": 5.437362432479858,
+      "verify_time": 12.031697750091553,
+      "total_time": 65.92939734458923,
+      "strategy": "generic"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:25:50.599451",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 1,
+      "tactic": "intro a b c induction c with | zero => rw [Nat.add_zero, Nat.add_zero] rfl | succ k ih => congr exact ih",
+      "success": false,
+      "error": "Unexpected error during Lean verification: local variable 'backup_file' referenced before assignment",
+      "llm_time": 32.60520601272583,
+      "verify_time": 5.827938079833984,
+      "total_time": 38.43394494056702,
+      "strategy": "generic"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:25:58.181946",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 2,
+      "tactic": "intro a b c exact Nat.add_assoc a b c",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmpieu3468t.lean:6:10: error: tactic 'introN' failed, insufficient number of binders\na : \u2115\n\u22a2 a + 0 = a\n",
+      "llm_time": 1.6432607173919678,
+      "verify_time": 5.936458587646484,
+      "total_time": 46.016441345214844,
+      "strategy": "generic"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:26:14.584963",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 3,
+      "tactic": "intro a b c",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmpqrk249tu.lean:6:10: error: tactic 'introN' failed, insufficient number of binders\na : \u2115\n\u22a2 a + 0 = a\n",
+      "llm_time": 10.446788787841797,
+      "verify_time": 5.9522340297698975,
+      "total_time": 62.41945743560791,
+      "strategy": "generic"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:27:27.588438",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 1,
+      "tactic": "rfl simp norm_num",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmpbydw2ara.lean:6:2: error: tactic 'rfl' failed, expected goal to be a binary relation\n\u22a2 \u2200 (n : \u2115), n + 0 = n\n/workspaces/Altera-Labs/backend/lean_verifier/tmpbydw2ara.lean:6:6: error: unexpected identifier; expected command\n",
+      "llm_time": 34.13190484046936,
+      "verify_time": 11.671845436096191,
+      "total_time": 73.00016856193542,
+      "strategy": "generic"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:27:40.420304",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 2,
+      "tactic": "rfl",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmpvzijtrac.lean:6:2: error: tactic 'rfl' failed, expected goal to be a binary relation\n\u22a2 \u2200 (n : \u2115), n + 0 = n\n",
+      "llm_time": 1.6237988471984863,
+      "verify_time": 11.198936223983765,
+      "total_time": 85.83203792572021,
+      "strategy": "generic"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:28:01.202957",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 3,
+      "tactic": "intro n",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmpass1p7gx.lean:5:43: error: unsolved goals\nn : \u2115\n\u22a2 n + 0 = n\n",
+      "llm_time": 9.68178677558899,
+      "verify_time": 11.096710920333862,
+      "total_time": 106.61467957496643,
+      "strategy": "generic"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:28:09.157274",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 1,
+      "tactic": "intro n",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmpass1p7gx.lean:5:43: error: unsolved goals\nn : \u2115\n\u22a2 n + 0 = n\n",
+      "llm_time": 7.946215867996216,
+      "verify_time": 0.0011103153228759766,
+      "total_time": 7.949048042297363,
+      "strategy": "addition_identity"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:28:25.574393",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 2,
+      "tactic": "intro n exact Nat.add_zero n",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmpzthyn008.lean:6:10: error: tactic 'introN' failed, insufficient number of binders\nn : \u2115\n\u22a2 n + 0 = n\n",
+      "llm_time": 1.9282193183898926,
+      "verify_time": 14.471919775009155,
+      "total_time": 24.366172075271606,
+      "strategy": "addition_identity"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:28:38.955051",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 3,
+      "tactic": "intro n",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmpass1p7gx.lean:5:43: error: unsolved goals\nn : \u2115\n\u22a2 n + 0 = n\n",
+      "llm_time": 13.371450424194336,
+      "verify_time": 0.0003428459167480469,
+      "total_time": 37.74683165550232,
+      "strategy": "addition_identity"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:45:53.178151",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 1,
+      "tactic": "simp",
+      "success": true,
+      "llm_time": 0.0,
+      "verify_time": 153.7371416091919,
+      "total_time": 153.7371416091919,
+      "strategy": "parallel_simple_arithmetic"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:47:28.720495",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 1,
+      "tactic": "intro n; exact Nat.add_zero n",
+      "success": true,
+      "llm_time": 0.0,
+      "verify_time": 95.53593587875366,
+      "total_time": 95.53593587875366,
+      "strategy": "parallel_identity"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:48:47.167808",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 1,
+      "tactic": "intro a b",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmpwx6k8a84.lean:5:43: error: unsolved goals\na b : \u2115\n\u22a2 a + b = b + a\n",
+      "llm_time": 20.6075701713562,
+      "verify_time": 6.963768243789673,
+      "total_time": 78.44421005249023,
+      "strategy": "commutativity"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:48:53.970497",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 2,
+      "tactic": "intro a b exact Nat.add_comm a b",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmpo18l2sbp.lean:6:12: error: tactic 'introN' failed, insufficient number of binders\na b : \u2115\n\u22a2 a + b = b + a\n",
+      "llm_time": 1.4900486469268799,
+      "verify_time": 5.306802272796631,
+      "total_time": 85.24690341949463,
+      "strategy": "commutativity"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:49:20.687647",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 3,
+      "tactic": "intro a b induction b with | zero => rw [Nat.add_zero] rw [Nat.zero_add] rfl | succ k ih => rw [Nat.add_succ] rw [Nat.succ_add] rw [ih] rfl",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmp6cyxq1nj.lean:6:12: error: tactic 'introN' failed, insufficient number of binders\na b : \u2115\n\u22a2 a + b = b + a\n/workspaces/Altera-Labs/backend/lean_verifier/tmp6cyxq1nj.lean:6:24: error: unexpected token 'with'; expected command\n",
+      "llm_time": 20.9355206489563,
+      "verify_time": 5.7768237590789795,
+      "total_time": 111.9640531539917,
+      "strategy": "commutativity"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:50:04.479416",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 1,
+      "tactic": "intro a b c",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmpxwcjj3fe.lean:5:57: error: unsolved goals\na b c : \u2115\n\u22a2 a + b + c = a + (b + c)\n",
+      "llm_time": 21.88170838356018,
+      "verify_time": 5.443106412887573,
+      "total_time": 43.76436734199524,
+      "strategy": "associativity"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:50:11.636601",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 2,
+      "tactic": "intro a b c",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmpc278xspf.lean:5:57: error: unsolved goals\na b c : \u2115\n\u22a2 a + b + c = a + (b + c)\n",
+      "llm_time": 1.6535072326660156,
+      "verify_time": 5.4999213218688965,
+      "total_time": 50.92155337333679,
+      "strategy": "associativity"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:50:26.948525",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 3,
+      "tactic": "intro a b c",
+      "success": false,
+      "error": "/workspaces/Altera-Labs/backend/lean_verifier/tmpjhu9vnu6.lean:5:57: error: unsolved goals\na b c : \u2115\n\u22a2 a + b + c = a + (b + c)\n",
+      "llm_time": 2.678157091140747,
+      "verify_time": 12.629178524017334,
+      "total_time": 66.23345971107483,
+      "strategy": "associativity"
+    }
+  },
+  {
+    "timestamp": "2025-07-27T19:51:04.240162",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 1,
+      "tactic": "simp",
+      "success": true,
+      "llm_time": 0.0,
+      "verify_time": 37.27779984474182,
+      "total_time": 37.27779984474182,
+      "strategy": "parallel_universal"
+    }
+  }
+]

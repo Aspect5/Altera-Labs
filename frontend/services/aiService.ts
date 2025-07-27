@@ -156,3 +156,104 @@ export const verifyProofStep = async (proof_state: string, step: string): Promis
     });
     return handleResponse<VerifyStepResponse>(response);
 };
+
+// ======================================================================================
+// == NEW: Enhanced Lean Verification API Functions
+// ======================================================================================
+
+interface AutoSolveResponse {
+    solved: boolean;
+    final_proof: string;
+    attempts: any[];
+    attempts_used: number;
+}
+
+interface DeveloperModeResponse {
+    message: string;
+    developer_mode: boolean;
+    max_attempts: number;
+}
+
+interface DeveloperLogsResponse {
+    developer_mode: boolean;
+    max_auto_solve_attempts: number;
+    config: any;
+    recent_logs: any[];
+    attempt_logs: any[];
+}
+
+interface HomeworkUploadResponse {
+    file_name: string;
+    theorems_found: number;
+    proof_states: string[];
+    solutions: any[];
+}
+
+/**
+ * Trigger AI auto-solving of a proof with configurable attempts.
+ * @param proof_state The current Lean proof state.
+ * @param max_attempts Optional maximum number of attempts.
+ * @returns A promise that resolves with the auto-solve result.
+ */
+export const autoSolveProof = async (proof_state: string, max_attempts?: number): Promise<AutoSolveResponse> => {
+    const response = await fetch(`${API_BASE_URL}/auto_solve_proof`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ proof_state, max_attempts }),
+        credentials: 'include',
+    });
+    return handleResponse<AutoSolveResponse>(response);
+};
+
+/**
+ * Toggle developer mode on/off.
+ * @param enabled Whether to enable developer mode.
+ * @param max_attempts Optional maximum number of auto-solve attempts.
+ * @returns A promise that resolves with the developer mode status.
+ */
+export const toggleDeveloperMode = async (enabled: boolean, max_attempts?: number): Promise<DeveloperModeResponse> => {
+    const response = await fetch(`${API_BASE_URL}/developer_mode`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled, max_attempts }),
+        credentials: 'include',
+    });
+    return handleResponse<DeveloperModeResponse>(response);
+};
+
+/**
+ * Get developer mode logs and configuration.
+ * @returns A promise that resolves with the developer logs.
+ */
+export const getDeveloperLogs = async (): Promise<DeveloperLogsResponse> => {
+    const response = await fetch(`${API_BASE_URL}/developer_logs`, {
+        method: 'GET',
+        credentials: 'include',
+    });
+    return handleResponse<DeveloperLogsResponse>(response);
+};
+
+export const clearDeveloperLogs = async (): Promise<{message: string}> => {
+    const response = await fetch(`${API_BASE_URL}/developer_logs/clear`, {
+        method: 'POST',
+        credentials: 'include',
+    });
+    return handleResponse<{message: string}>(response);
+};
+
+/**
+ * Upload homework file for enhanced processing with auto-solve.
+ * @param file The homework file to upload.
+ * @returns A promise that resolves with the homework processing result.
+ */
+export const uploadHomework = async (file: File): Promise<HomeworkUploadResponse> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${API_BASE_URL}/upload_homework`, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+    });
+    return handleResponse<HomeworkUploadResponse>(response);
+};

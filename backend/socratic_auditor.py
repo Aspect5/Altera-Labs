@@ -18,9 +18,9 @@ from pathlib import Path
 from typing import Tuple, Dict, Any
 
 # --- AI Model Imports ---
-# This file is now exclusively using the Google Cloud Vertex AI platform.
+# Use the proper Vertex AI SDK for Google Cloud (updated to avoid deprecation)
 import vertexai
-from vertexai.generative_models import GenerativeModel, Part, HarmCategory, HarmBlockThreshold
+from vertexai.generative_models import GenerativeModel, Part
 
 # --- Local Imports ---
 # A fallback stub for local development or when the API is unavailable.
@@ -45,63 +45,66 @@ LEAN_MAIN_FILE = LEAN_PROJECT_PATH / 'LeanVerifier.lean'
 LAKE_EXECUTABLE_PATH = os.getenv('LAKE_EXECUTABLE_PATH', 'lake')
 
 
-def get_llm_response(prompt: str, model_name: str = "gemini-2.5-flash", is_json: bool = False) -> str:
+def get_llm_response(prompt: str, model_name: str = None, is_json: bool = False) -> str:
     """
-    Handles all communication with the Vertex AI Generative Model.
+    Handles all communication with the Google Generative AI Model.
 
     This function sends a prompt to the specified model and handles the response,
     including error cases and fallbacks.
 
     Args:
         prompt (str): The prompt to send to the language model.
-        model_name (str): The name of the Vertex AI model to use.
+        model_name (str): The name of the Google AI model to use. Defaults to DEFAULT_LLM_MODEL env var.
         is_json (bool): If True, requests a JSON response from the model.
 
     Returns:
         str: The text response from the model.
     """
+    # Use environment variable for default model if not specified
+    if model_name is None:
+        model_name = os.environ.get("DEFAULT_LLM_MODEL", "gemini-2.5-flash")
+    
+    # Try to use Vertex AI SDK (proper Google Cloud integration)
     try:
-        # Instantiate the model
-        model = GenerativeModel(model_name)
-
-        # Configure safety settings to be less restrictive for this specific use case.
-        # This may need adjustment based on policy and observed model behavior.
-        safety_settings = {
-            HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_ONLY_HIGH,
-            HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_ONLY_HIGH,
-            HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_ONLY_HIGH,
-            HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_ONLY_HIGH,
-        }
+        # Initialize Vertex AI with project and location from environment
+        project_id = os.environ.get("VERTEX_AI_PROJECT_ID")
+        location = os.environ.get("VERTEX_AI_LOCATION")
         
-        # Configure the generation parameters.
-        generation_config = {
-            "temperature": 0.3, # Lower temperature for more deterministic, less "creative" output
-            "top_p": 0.95,
-            "max_output_tokens": 20000,
-        }
-        if is_json:
-            generation_config["response_mime_type"] = "application/json"
-
-        # Generate the content
-        response = model.generate_content(
-            [prompt],
-            generation_config=generation_config,
-            safety_settings=safety_settings
-        )
-        
-        # Robustly check for a valid response
-        if response and response.candidates:
-            if response.candidates[0].finish_reason.name == "SAFETY":
-                logging.warning("Response was blocked by safety settings.")
-                return '{"error": "Response blocked by safety settings."}' if is_json else "My response was blocked by safety settings. Please try rephrasing your request."
-            if response.text:
+        if project_id and location:
+            # Initialize Vertex AI
+            vertexai.init(project=project_id, location=location)
+            
+            # Create the generative model
+            model = GenerativeModel(model_name)
+            
+            # Configure generation parameters
+            generation_config = {
+                "temperature": 0.3,
+                "top_p": 0.95,
+                "max_output_tokens": 20000,
+            }
+            if is_json:
+                generation_config["response_mime_type"] = "application/json"
+            
+            # Generate content using the updated API
+            response = model.generate_content(
+                [Part.from_text(prompt)],
+                generation_config=generation_config
+            )
+            
+            if response and hasattr(response, 'text') and response.text:
                 return response.text
-        
-        # If no valid text is found, raise an error
-        raise ValueError("Received an empty or invalid response from the API.")
-
+            else:
+                raise ValueError("Received an empty or invalid response from Vertex AI")
+                
+        else:
+            raise ValueError("VERTEX_AI_PROJECT_ID and VERTEX_AI_LOCATION must be set for Vertex AI")
+            
+    except ImportError:
+        logging.warning("Vertex AI SDK not available, falling back to local stub")
+        return local_llm_stub.generate_response(prompt, is_json_output=is_json)
     except Exception as e:
-        logging.error(f"Vertex AI API call failed: {e}. Falling back to local stub.")
+        logging.error(f"Vertex AI API call failed: {e}, falling back to local stub")
         return local_llm_stub.generate_response(prompt, is_json_output=is_json)
 
 
@@ -271,3 +274,170 @@ def verify_step(proof_state: str, user_message: str, mode: str = 'homework') -> 
             "ai_response_text": ai_response_text,
             "lean_tactic": lean_tactic
         }
+
+
+class ProvingAgent:
+    """
+    A class that handles mathematical problem solving and verification using Lean 4.
+    This agent can convert natural language problems to Lean 4, verify solutions,
+    and generate solution graphs for concept extraction.
+    """
+    
+    def __init__(self):
+        self.lean_project_path = LEAN_PROJECT_PATH
+        self.lake_executable = LAKE_EXECUTABLE_PATH
+    
+    def solve_problem(self, problem_description: str) -> Dict[str, Any]:
+        """
+        Solve a mathematical problem described in natural language.
+        
+        Args:
+            problem_description (str): Natural language description of the problem
+            
+        Returns:
+            Dict containing solution status and details
+        """
+        try:
+            # Convert natural language to Lean 4
+            lean_code = self.convert_to_lean(problem_description)
+            
+            # Verify with Lean 4
+            verification_result = self.verify_with_lean(lean_code)
+            
+            # Generate solution graph if successful
+            if verification_result['status'] == 'SOLVED':
+                solution_graph = self.generate_solution_graph(lean_code, problem_description)
+                verification_result['solution_graph'] = solution_graph
+            
+            return verification_result
+            
+        except Exception as e:
+            logging.error(f"Error in solve_problem: {e}")
+            return {
+                'status': 'ERROR',
+                'error': str(e),
+                'feedback': 'An error occurred while processing the problem.'
+            }
+    
+    def convert_to_lean(self, problem_description: str) -> str:
+        """
+        Convert natural language problem description to Lean 4 code.
+        
+        Args:
+            problem_description (str): Natural language description
+            
+        Returns:
+            str: Lean 4 code
+        """
+        prompt = f"""
+        You are an expert in Lean 4 and group theory. Convert the following problem description into valid Lean 4 code.
+        
+        Problem: {problem_description}
+        
+        Generate a complete Lean 4 theorem or lemma that represents this problem. Include all necessary imports and make sure the code is syntactically correct.
+        
+        Respond with only the Lean 4 code, no explanations.
+        """
+        
+        try:
+            lean_code = get_llm_response(prompt)
+            return lean_code.strip()
+        except Exception as e:
+            logging.error(f"Error converting to Lean: {e}")
+            raise
+    
+    def verify_with_lean(self, lean_code: str) -> Dict[str, Any]:
+        """
+        Verify Lean 4 code using the Lean compiler.
+        
+        Args:
+            lean_code (str): Lean 4 code to verify
+            
+        Returns:
+            Dict containing verification status and feedback
+        """
+        try:
+            # Create a temporary file with the Lean code
+            temp_file = self.lean_project_path / 'temp_proof.lean'
+            with open(temp_file, 'w') as f:
+                f.write(lean_code)
+            
+            # Run Lean compiler
+            result = subprocess.run(
+                [self.lake_executable, 'build'],
+                cwd=self.lean_project_path,
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            # Clean up temporary file
+            temp_file.unlink(missing_ok=True)
+            
+            if result.returncode == 0:
+                return {
+                    'status': 'SOLVED',
+                    'feedback': 'The proof is correct and verified by Lean 4.',
+                    'lean_output': result.stdout
+                }
+            else:
+                return {
+                    'status': 'FAILED',
+                    'feedback': f'Lean 4 verification failed: {result.stderr}',
+                    'lean_output': result.stderr
+                }
+                
+        except subprocess.TimeoutExpired:
+            return {
+                'status': 'FAILED',
+                'feedback': 'Verification timed out. The proof may be too complex.',
+                'lean_output': 'Timeout'
+            }
+        except Exception as e:
+            return {
+                'status': 'ERROR',
+                'feedback': f'Error during verification: {str(e)}',
+                'lean_output': str(e)
+            }
+    
+    def generate_solution_graph(self, lean_code: str, problem_description: str) -> Dict[str, Any]:
+        """
+        Generate a solution graph showing the concepts and steps used in the proof.
+        
+        Args:
+            lean_code (str): The verified Lean 4 code
+            problem_description (str): Original problem description
+            
+        Returns:
+            Dict containing solution graph structure
+        """
+        prompt = f"""
+        Analyze the following Lean 4 proof and generate a solution graph showing the mathematical concepts and logical steps used.
+        
+        Problem: {problem_description}
+        Proof: {lean_code}
+        
+        Generate a JSON object with the following structure:
+        {{
+            "concepts": ["list", "of", "mathematical", "concepts"],
+            "steps": [
+                {{
+                    "step": "description of the step",
+                    "concept": "mathematical concept used",
+                    "difficulty": "easy|medium|hard"
+                }}
+            ],
+            "prerequisites": ["list", "of", "prerequisite", "concepts"]
+        }}
+        """
+        
+        try:
+            response = get_llm_response(prompt, is_json=True)
+            return json.loads(response)
+        except Exception as e:
+            logging.error(f"Error generating solution graph: {e}")
+            return {
+                'concepts': [],
+                'steps': [],
+                'prerequisites': []
+            }

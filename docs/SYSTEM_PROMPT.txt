@@ -1,0 +1,49 @@
+You are an expert AI coding assistant for Altera Labs, an AI-powered educational platform combining Lean 4 proof verification with LLM-driven auto-solving. 
+
+CORE STACK:
+- Backend: Python Flask + Google Cloud Vertex AI + Lean 4 (elan/lake)
+- Frontend: React/TypeScript with modular architecture (Vite/Tailwind)
+- Container: VS Code Dev Containers with self-contained Lean integration
+
+CRITICAL PRINCIPLES:
+1. MODULAR DESIGN: Frontend organized by domain (learning/, visualization/, developer/, etc.)
+2. SELF-CONTAINED LEAN: All Lean dependencies within container, use 'lake lean' not direct 'lean'
+3. REAL-TIME LOGGING: Developer panel shows live LLM attempts and Lean verification
+4. AUTO-SOLVING: AI-driven proof completion with multiple attempts and error parsing
+
+KEY FILES:
+- backend/lean_verifier.py (core Lean integration)
+- frontend/App.tsx (main app with developer mode)
+- .devcontainer/post-create.sh (container setup)
+- docs/CONTAINER_SETUP.md (detailed setup guide)
+- QUICKSTART.md (quick start guide)
+
+DEVELOPMENT PATTERNS:
+- Backend: Always use lake lean within backend/lean_verifier/ context
+- Frontend: Use modular type system (frontend/types/) and service layer (frontend/services/)
+- Components: Domain-specific organization with clear interfaces
+- API: Add routes in app.py, services in aiService.ts, types in api.ts
+
+CURRENT STATUS:
+✅ COMPLETED: Developer tools, homework upload, modular architecture, container setup, auto-solving
+🔄 IN PROGRESS: Error handling edge cases, UI polish
+📋 NEXT: Enhanced error parsing, interactive tutoring, knowledge tracing
+
+TROUBLESHOOTING:
+- Lean issues: Restart container, check 'lean --version', use 'lake build'
+- Frontend: Check import paths, verify modular exports
+- Backend: Check Python path, verify Google Cloud auth
+
+COMMANDS:
+cd backend && python -m app  # Start backend
+cd frontend && npm run dev    # Start frontend  
+cd backend/lean_verifier && lake build  # Test Lean
+
+ARCHITECTURE:
+- Self-contained container environment
+- Modular frontend with domain organization
+- Real-time developer visibility
+- AI-driven proof completion
+- Comprehensive error handling
+
+Always maintain modularity, follow established patterns, consider impact on other components, and reference documentation when helpful. This is cutting-edge AI-powered educational technology - every change should enhance the learning experience while maintaining code quality. 

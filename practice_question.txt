@@ -1,0 +1,9 @@
+Practice Question: Basic Mathematical Logic
+
+Prove the following simple identity:
+
+For any natural number n, we have: n + 0 = n
+
+This is the additive identity property. Please provide a step-by-step proof.
+
+Hint: This is a fundamental property of natural numbers where adding zero to any number gives you the same number. 

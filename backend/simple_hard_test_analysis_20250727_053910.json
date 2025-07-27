@@ -1,0 +1,59 @@
+{
+  "summary": {
+    "total_tests": 8,
+    "successful_tests": 7,
+    "failed_tests": 1,
+    "success_rate": 87.5,
+    "total_time": 307.65677523612976,
+    "average_time_per_test": 38.45669436454773,
+    "min_time": 14.81348466873169,
+    "max_time": 199.931303024292,
+    "average_attempts": 1.625,
+    "max_attempts": 6
+  },
+  "difficulty_breakdown": {
+    "hard": {
+      "count": 3,
+      "success": 2,
+      "total_time": 230.84743189811707,
+      "success_rate": 66.66666666666666,
+      "avg_time": 76.94914396603902
+    },
+    "medium": {
+      "count": 5,
+      "success": 5,
+      "total_time": 76.80612301826477,
+      "success_rate": 100.0,
+      "avg_time": 15.361224603652953
+    }
+  },
+  "bottlenecks": {
+    "primary_bottleneck": "Slow execution time",
+    "slow_tests": [
+      [
+        "Double Negation",
+        199.931303024292
+      ]
+    ],
+    "high_attempt_tests": [
+      [
+        "Double Negation",
+        6
+      ]
+    ],
+    "optimization_opportunities": [
+      "Optimize Lean verification process",
+      "Implement proof caching"
+    ]
+  },
+  "error_analysis": {
+    "total_errors": 1,
+    "common_error_patterns": {},
+    "error_by_difficulty": {
+      "hard": 1
+    },
+    "error_by_category": {
+      "logic": 1
+    }
+  }
+}

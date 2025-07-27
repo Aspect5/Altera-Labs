@@ -12,9 +12,14 @@ import json  # Import the json library
 from typing import Any, Dict
 
 CANNED = [
-    "Let's unpack that step. Which lemma could apply next?",
-    "Remember: identity means x * e = x for all x. How does that help?",
-    "Interesting thought! Can you restate the goal in your own words?",
+    "intro a b c; exact Nat.mul_add a b c",
+    "intro n; exact Nat.add_zero n",
+    "intro a b; exact Nat.add_comm a b",
+    "intro n; exact Nat.one_mul n",
+    "intro P h; contradiction",
+    "intro n; exact Nat.zero_le n",
+    "intro n; exact Nat.le_refl n",
+    "intro n; exact Nat.lt_succ_self n",
 ]
 
 def generate_response(prompt: str, is_json_output: bool = False) -> str:
@@ -38,8 +43,8 @@ def generate_response(prompt: str, is_json_output: bool = False) -> str:
         
         # Default JSON response
         data = {
-            "action": "GIVE_HINT",
-            "tactic_or_response_text": "Let's focus on the proof. What is the very first logical deduction we can make?"
+            "action": "TRANSLATE_TACTIC",
+            "tactic_or_response_text": random.choice(CANNED)
         }
         return json.dumps(data)
         

@@ -1,0 +1,500 @@
+{
+  "timestamp": "2025-07-27T20:08:18.326492",
+  "total_test_time": 1498.8863635063171,
+  "baseline_results": {
+    "test_name": "baseline",
+    "total_tests": 5,
+    "successful_tests": 3,
+    "parallel_successes": 3,
+    "success_rate": 60.0,
+    "parallel_success_rate": 60.0,
+    "total_time": 464.8031077384949,
+    "average_time": 92.96062154769898,
+    "results": [
+      {
+        "test_case": "Simple Addition (Optimized)",
+        "success": true,
+        "time": 153.74169278144836,
+        "attempts": 1,
+        "tactic": "simp",
+        "llm_time": 0.0,
+        "verify_time": 153.7371416091919,
+        "parallel_execution": true,
+        "strategy": "parallel_simple_arithmetic",
+        "optimization_target": "direct_library_call"
+      },
+      {
+        "test_case": "Zero Addition (Optimized)",
+        "success": true,
+        "time": 95.53898215293884,
+        "attempts": 1,
+        "tactic": "intro n; exact Nat.add_zero n",
+        "llm_time": 0.0,
+        "verify_time": 95.53593587875366,
+        "parallel_execution": true,
+        "strategy": "parallel_identity",
+        "optimization_target": "identity_optimization"
+      },
+      {
+        "test_case": "Addition Commutativity (Optimized)",
+        "success": false,
+        "time": 111.99130177497864,
+        "attempts": 3,
+        "tactic": "",
+        "llm_time": 0,
+        "verify_time": 0,
+        "parallel_execution": false,
+        "strategy": "commutativity",
+        "optimization_target": "commutativity_optimization"
+      },
+      {
+        "test_case": "Addition Associativity (Optimized)",
+        "success": false,
+        "time": 66.246586561203,
+        "attempts": 3,
+        "tactic": "",
+        "llm_time": 0,
+        "verify_time": 0,
+        "parallel_execution": false,
+        "strategy": "associativity",
+        "optimization_target": "associativity_optimization"
+      },
+      {
+        "test_case": "Multiplication Commutativity (Optimized)",
+        "success": true,
+        "time": 37.284544467926025,
+        "attempts": 1,
+        "tactic": "simp",
+        "llm_time": 0.0,
+        "verify_time": 37.27779984474182,
+        "parallel_execution": true,
+        "strategy": "parallel_universal",
+        "optimization_target": "commutativity_optimization"
+      }
+    ],
+    "performance_stats": {
+      "total_verifications": 23,
+      "cache_hits": 0,
+      "cache_misses": 0,
+      "parallel_executions": 0,
+      "avg_verification_time": 18.791994182430965,
+      "total_time_saved": 0.0
+    }
+  },
+  "optimized_results": {
+    "test_name": "optimized",
+    "total_tests": 5,
+    "successful_tests": 3,
+    "parallel_successes": 3,
+    "success_rate": 60.0,
+    "parallel_success_rate": 60.0,
+    "total_time": 274.2861981391907,
+    "average_time": 54.85723962783813,
+    "results": [
+      {
+        "test_case": "Simple Addition (Optimized)",
+        "success": true,
+        "time": 45.317885875701904,
+        "attempts": 1,
+        "tactic": "norm_num",
+        "llm_time": 0.0,
+        "verify_time": 45.31713342666626,
+        "parallel_execution": true,
+        "strategy": "parallel_simple_arithmetic",
+        "optimization_target": "direct_library_call"
+      },
+      {
+        "test_case": "Zero Addition (Optimized)",
+        "success": true,
+        "time": 13.080451965332031,
+        "attempts": 1,
+        "tactic": "intro n; exact Nat.add_zero n",
+        "llm_time": 0.0,
+        "verify_time": 13.07997441291809,
+        "parallel_execution": true,
+        "strategy": "parallel_identity",
+        "optimization_target": "identity_optimization"
+      },
+      {
+        "test_case": "Addition Commutativity (Optimized)",
+        "success": false,
+        "time": 100.2384467124939,
+        "attempts": 3,
+        "tactic": "",
+        "llm_time": 0,
+        "verify_time": 0,
+        "parallel_execution": false,
+        "strategy": "commutativity",
+        "optimization_target": "commutativity_optimization"
+      },
+      {
+        "test_case": "Addition Associativity (Optimized)",
+        "success": false,
+        "time": 103.68008399009705,
+        "attempts": 3,
+        "tactic": "",
+        "llm_time": 0,
+        "verify_time": 0,
+        "parallel_execution": false,
+        "strategy": "associativity",
+        "optimization_target": "associativity_optimization"
+      },
+      {
+        "test_case": "Multiplication Commutativity (Optimized)",
+        "success": true,
+        "time": 11.969329595565796,
+        "attempts": 1,
+        "tactic": "intro",
+        "llm_time": 0.0,
+        "verify_time": 11.968625783920288,
+        "parallel_execution": true,
+        "strategy": "parallel_universal",
+        "optimization_target": "commutativity_optimization"
+      }
+    ],
+    "performance_stats": {
+      "total_verifications": 46,
+      "cache_hits": 0,
+      "cache_misses": 6,
+      "parallel_executions": 5,
+      "avg_verification_time": 18.106121747743224,
+      "total_time_saved": 0.0
+    }
+  },
+  "parallel_results": {
+    "test_name": "parallel_only",
+    "total_tests": 5,
+    "successful_tests": 3,
+    "parallel_successes": 3,
+    "success_rate": 60.0,
+    "parallel_success_rate": 60.0,
+    "total_time": 252.61656045913696,
+    "average_time": 50.52331209182739,
+    "results": [
+      {
+        "test_case": "Simple Addition (Optimized)",
+        "success": true,
+        "time": 54.068066120147705,
+        "attempts": 1,
+        "tactic": "norm_num",
+        "llm_time": 0.0,
+        "verify_time": 54.066861629486084,
+        "parallel_execution": true,
+        "strategy": "parallel_simple_arithmetic",
+        "optimization_target": "direct_library_call"
+      },
+      {
+        "test_case": "Zero Addition (Optimized)",
+        "success": true,
+        "time": 13.231743097305298,
+        "attempts": 1,
+        "tactic": "intro n; exact Nat.add_zero n",
+        "llm_time": 0.0,
+        "verify_time": 13.230702638626099,
+        "parallel_execution": true,
+        "strategy": "parallel_identity",
+        "optimization_target": "identity_optimization"
+      },
+      {
+        "test_case": "Addition Commutativity (Optimized)",
+        "success": false,
+        "time": 67.50585985183716,
+        "attempts": 3,
+        "tactic": "",
+        "llm_time": 0,
+        "verify_time": 0,
+        "parallel_execution": false,
+        "strategy": "commutativity",
+        "optimization_target": "commutativity_optimization"
+      },
+      {
+        "test_case": "Addition Associativity (Optimized)",
+        "success": false,
+        "time": 103.5950038433075,
+        "attempts": 3,
+        "tactic": "",
+        "llm_time": 0,
+        "verify_time": 0,
+        "parallel_execution": false,
+        "strategy": "associativity",
+        "optimization_target": "associativity_optimization"
+      },
+      {
+        "test_case": "Multiplication Commutativity (Optimized)",
+        "success": true,
+        "time": 14.215887546539307,
+        "attempts": 1,
+        "tactic": "exact",
+        "llm_time": 0.0,
+        "verify_time": 14.214500665664673,
+        "parallel_execution": true,
+        "strategy": "parallel_universal",
+        "optimization_target": "commutativity_optimization"
+      }
+    ],
+    "performance_stats": {
+      "total_verifications": 69,
+      "cache_hits": 0,
+      "cache_misses": 6,
+      "parallel_executions": 10,
+      "avg_verification_time": 17.69668658517415,
+      "total_time_saved": 0.0
+    }
+  },
+  "cache_results": {
+    "first_run": {
+      "test_name": "cache_first_run",
+      "total_tests": 5,
+      "successful_tests": 3,
+      "parallel_successes": 3,
+      "success_rate": 60.0,
+      "parallel_success_rate": 60.0,
+      "total_time": 355.6159234046936,
+      "average_time": 71.12318468093872,
+      "results": [
+        {
+          "test_case": "Simple Addition (Optimized)",
+          "success": true,
+          "time": 89.08503413200378,
+          "attempts": 1,
+          "tactic": "simp",
+          "llm_time": 0.0,
+          "verify_time": 89.0845935344696,
+          "parallel_execution": true,
+          "strategy": "parallel_simple_arithmetic",
+          "optimization_target": "direct_library_call"
+        },
+        {
+          "test_case": "Zero Addition (Optimized)",
+          "success": true,
+          "time": 36.66125011444092,
+          "attempts": 1,
+          "tactic": "intro n; exact Nat.add_zero n",
+          "llm_time": 0.0,
+          "verify_time": 36.660362005233765,
+          "parallel_execution": true,
+          "strategy": "parallel_identity",
+          "optimization_target": "identity_optimization"
+        },
+        {
+          "test_case": "Addition Commutativity (Optimized)",
+          "success": false,
+          "time": 107.44572401046753,
+          "attempts": 3,
+          "tactic": "",
+          "llm_time": 0,
+          "verify_time": 0,
+          "parallel_execution": false,
+          "strategy": "commutativity",
+          "optimization_target": "commutativity_optimization"
+        },
+        {
+          "test_case": "Addition Associativity (Optimized)",
+          "success": false,
+          "time": 98.81381487846375,
+          "attempts": 3,
+          "tactic": "",
+          "llm_time": 0,
+          "verify_time": 0,
+          "parallel_execution": false,
+          "strategy": "associativity",
+          "optimization_target": "associativity_optimization"
+        },
+        {
+          "test_case": "Multiplication Commutativity (Optimized)",
+          "success": true,
+          "time": 23.610100269317627,
+          "attempts": 1,
+          "tactic": "simp",
+          "llm_time": 0.0,
+          "verify_time": 23.609407901763916,
+          "parallel_execution": true,
+          "strategy": "parallel_universal",
+          "optimization_target": "commutativity_optimization"
+        }
+      ],
+      "performance_stats": {
+        "total_verifications": 92,
+        "cache_hits": 0,
+        "cache_misses": 12,
+        "parallel_executions": 10,
+        "avg_verification_time": 17.42462151072284,
+        "total_time_saved": 0.0
+      }
+    },
+    "second_run": {
+      "test_name": "cache_second_run",
+      "total_tests": 5,
+      "successful_tests": 3,
+      "parallel_successes": 3,
+      "success_rate": 60.0,
+      "parallel_success_rate": 60.0,
+      "total_time": 151.5404462814331,
+      "average_time": 30.30808925628662,
+      "results": [
+        {
+          "test_case": "Simple Addition (Optimized)",
+          "success": true,
+          "time": 0.0015125274658203125,
+          "attempts": 1,
+          "tactic": "simp",
+          "llm_time": 0.0,
+          "verify_time": 0.0010595321655273438,
+          "parallel_execution": true,
+          "strategy": "parallel_simple_arithmetic",
+          "optimization_target": "direct_library_call"
+        },
+        {
+          "test_case": "Zero Addition (Optimized)",
+          "success": true,
+          "time": 0.0014548301696777344,
+          "attempts": 1,
+          "tactic": "intro n; exact Nat.add_zero n",
+          "llm_time": 0.0,
+          "verify_time": 0.0009613037109375,
+          "parallel_execution": true,
+          "strategy": "parallel_identity",
+          "optimization_target": "identity_optimization"
+        },
+        {
+          "test_case": "Addition Commutativity (Optimized)",
+          "success": false,
+          "time": 64.95637011528015,
+          "attempts": 3,
+          "tactic": "",
+          "llm_time": 0,
+          "verify_time": 0,
+          "parallel_execution": false,
+          "strategy": "commutativity",
+          "optimization_target": "commutativity_optimization"
+        },
+        {
+          "test_case": "Addition Associativity (Optimized)",
+          "success": false,
+          "time": 86.5793719291687,
+          "attempts": 3,
+          "tactic": "",
+          "llm_time": 0,
+          "verify_time": 0,
+          "parallel_execution": false,
+          "strategy": "associativity",
+          "optimization_target": "associativity_optimization"
+        },
+        {
+          "test_case": "Multiplication Commutativity (Optimized)",
+          "success": true,
+          "time": 0.0017368793487548828,
+          "attempts": 1,
+          "tactic": "simp",
+          "llm_time": 0.0,
+          "verify_time": 0.0013988018035888672,
+          "parallel_execution": true,
+          "strategy": "parallel_universal",
+          "optimization_target": "commutativity_optimization"
+        }
+      ],
+      "performance_stats": {
+        "total_verifications": 115,
+        "cache_hits": 0,
+        "cache_misses": 18,
+        "parallel_executions": 10,
+        "avg_verification_time": 17.42462151072284,
+        "total_time_saved": 0.0
+      }
+    },
+    "cache_stats": {
+      "total_entries": 24,
+      "total_requests": 80,
+      "hits": 17,
+      "misses": 63,
+      "saves": 28,
+      "hit_rate": 21.25,
+      "cache_size_mb": 0.004134178161621094
+    },
+    "cache_effectiveness": {
+      "hit_rate": 21.25,
+      "total_requests": 80,
+      "hits": 17,
+      "misses": 63
+    }
+  },
+  "performance_improvements": {
+    "time_improvement_percent": 40.98873403111837,
+    "baseline_avg_time": 92.96062154769898,
+    "optimized_avg_time": 54.85723962783813,
+    "time_saved_per_test": 38.103381919860844,
+    "parallel_success_rate": 60.0,
+    "cache_hit_rate": 21.25
+  },
+  "cache_analysis": {
+    "initial_stats": {
+      "total_entries": 0,
+      "total_requests": 0,
+      "hits": 0,
+      "misses": 0,
+      "saves": 0,
+      "hit_rate": 0.0,
+      "cache_size_mb": 0.0
+    },
+    "final_stats": {
+      "total_entries": 24,
+      "total_requests": 80,
+      "hits": 17,
+      "misses": 63,
+      "saves": 28,
+      "hit_rate": 21.25,
+      "cache_size_mb": 0.004134178161621094
+    },
+    "cache_growth": 24
+  },
+  "environment_analysis": {
+    "initial_stats": {
+      "precompiled": false,
+      "warmed_up": false,
+      "lean_project_dir": "/workspaces/Altera-Labs/backend/lean_verifier",
+      "stats": {
+        "precompilation_time": 0.0,
+        "warmup_time": 0.0,
+        "total_optimization_time": 0.0,
+        "last_optimization": null
+      },
+      "common_proofs_count": 5
+    },
+    "final_stats": {
+      "precompiled": true,
+      "warmed_up": true,
+      "lean_project_dir": "/workspaces/Altera-Labs/backend/lean_verifier",
+      "stats": {
+        "precompilation_time": 1.8980517387390137,
+        "warmup_time": 40.22150135040283,
+        "total_optimization_time": 19.32979655265808,
+        "last_optimization": 1753645681.6487582
+      },
+      "common_proofs_count": 11
+    }
+  },
+  "performance_stats_analysis": {
+    "initial_stats": {
+      "total_verifications": 0,
+      "cache_hits": 0,
+      "cache_misses": 0,
+      "parallel_executions": 0,
+      "avg_verification_time": 0.0,
+      "total_time_saved": 0.0
+    },
+    "final_stats": {
+      "total_verifications": 115,
+      "cache_hits": 0,
+      "cache_misses": 18,
+      "parallel_executions": 10,
+      "avg_verification_time": 17.42462151072284,
+      "total_time_saved": 0.0
+    },
+    "improvements": {
+      "total_verifications": 115,
+      "cache_hits": 0,
+      "parallel_executions": 10,
+      "avg_verification_time": 17.42462151072284
+    }
+  }
+}

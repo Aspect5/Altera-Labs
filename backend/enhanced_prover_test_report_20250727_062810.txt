@@ -1,0 +1,43 @@
+
+🎯 ENHANCED AI PROVER TEST REPORT
+=====================================
+Generated: 2025-07-27 06:28:10
+
+📈 OVERALL PERFORMANCE
+---------------------
+Total Tests: 3
+Successful: 0
+Failed: 3
+Success Rate: 0.0%
+
+⏱️ TIMING METRICS
+-----------------
+Average Time: 242.60s
+Average Attempts: 8.0
+
+🧪 INDIVIDUAL TEST RESULTS
+-------------------------
+
+❌ FAIL Double Negation (Previously Failed)
+  Goal: ∀ P, ¬¬P ↔ P
+  Strategy: unknown
+  Attempts: 8
+  Time: 228.12s
+  Generated: 
+  Expected: intro P; constructor; intro h; by_contra h1; contradiction
+
+❌ FAIL Binomial Theorem (Previously Failed)
+  Goal: ∀ a b, (a + b)^2 = a^2 + 2*a*b + b^2
+  Strategy: unknown
+  Attempts: 8
+  Time: 235.12s
+  Generated: 
+  Expected: intro a b; simp [Nat.pow_two, Nat.mul_add, Nat.add_mul, Nat.mul_comm]
+
+❌ FAIL Exponential Properties (Previously Failed)
+  Goal: ∀ a b c, (a^b)^c = a^(b*c)
+  Strategy: unknown
+  Attempts: 8
+  Time: 264.55s
+  Generated: 
+  Expected: intro a b c; exact Nat.pow_mul a b c

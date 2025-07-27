@@ -8,35 +8,38 @@ import sys # --- ADDED: To allow exiting on critical errors ---
 import random # --- ADDED: For Proving Agent MVP simulation ---
 from pathlib import Path
 from typing import Dict, Any
+from datetime import datetime
 
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify, session
 from flask_cors import CORS
 import fitz
-import vertexai # --- ADDED: Import the Vertex AI library ---
+ # --- ADDED: Import the Vertex AI library ---
 
-from . import prompts
-from . import metacognition
-from . import rag_manager
-from .socratic_auditor import get_llm_response
-from .lean_verifier import lean_verifier_instance 
+import prompts
+import metacognition
+import rag_manager
+from socratic_auditor import get_llm_response
+from lean_verifier import lean_verifier_instance
+from config.developer_config import developer_config, developer_logger
+from llm_performance_tester import performance_tester 
 
 # --- FIXED: Load environment variables and initialize AI services at startup ---
 load_dotenv()
 
-# Initialize Vertex AI
+# Initialize Google AI
 try:
     PROJECT_ID = os.environ.get("VERTEX_AI_PROJECT_ID")
     LOCATION = os.environ.get("VERTEX_AI_LOCATION")
-
+    DEFAULT_MODEL = os.environ.get("DEFAULT_LLM_MODEL", "gemini-2.5-flash")
+    
     if PROJECT_ID and LOCATION:
-        vertexai.init(project=PROJECT_ID, location=LOCATION)
-        logging.info(f"Vertex AI initialized successfully for project '{PROJECT_ID}' in '{LOCATION}'.")
+        logging.info(f"Google AI configured for project '{PROJECT_ID}' in '{LOCATION}' with model '{DEFAULT_MODEL}'.")
     else:
-        logging.warning("VERTEX_AI_PROJECT_ID and VERTEX_AI_LOCATION not set. Running in development mode without Vertex AI.")
+        logging.warning("VERTEX_AI_PROJECT_ID and VERTEX_AI_LOCATION not set. Running in development mode with local stub.")
 
 except Exception as e:
-    logging.warning(f"Vertex AI initialization failed: {e}. Continuing without Vertex AI.")
+    logging.warning(f"Google AI initialization failed: {e}. Continuing with local stub.")
 
 # --- Flask App Initialization ---
 app = Flask(__name__)
@@ -137,20 +140,64 @@ Keep your response conversational and supportive. Do NOT mention syllabus analys
             "aiResponse": "Hello! I'm here to help you with your mathematical thinking. Let's start by understanding what we're trying to prove. Can you explain the goal in your own words?"
         })
 
+def contains_math(user_message: str) -> bool:
+    """
+    Helper function to detect if a user message contains mathematical content
+    that should trigger Lean 4 verification.
+    """
+    math_keywords = [
+        'prove', 'proof', 'theorem', 'lemma', 'corollary', 'show', 'verify',
+        'group', 'subgroup', 'identity', 'inverse', 'associative', 'commutative',
+        'element', 'operation', 'binary', 'closure', 'abelian', 'cyclic',
+        'order', 'generator', 'coset', 'normal', 'quotient', 'homomorphism',
+        'isomorphism', 'automorphism', 'kernel', 'image', 'direct product',
+        'semi-direct', 'free', 'presentation', 'word', 'relation'
+    ]
+    
+    message_lower = user_message.lower()
+    return any(keyword in message_lower for keyword in math_keywords)
+
 @app.route('/api/chat', methods=['POST'])
 def handle_chat_message():
     if 'user_id' not in session:
         return jsonify({"error": "No active session."}), 401
     data = request.get_json()
     user_message = data['message']
+    
     try:
-        ai_response = metacognition.process_message(session, user_message)
-        session.modified = True
-        return jsonify({
-            "aiResponse": ai_response['ai_response_text'],
-            "proofCode": ai_response.get('proof_code', session['student_model']['current_proof_state']),
-            "isVerified": ai_response.get('is_verified')
-        })
+        # Check if the message contains mathematical content
+        if contains_math(user_message):
+            # Use ProvingAgent for mathematical verification
+            from socratic_auditor import ProvingAgent
+            proving_agent = ProvingAgent()
+            result = proving_agent.solve_problem(user_message)
+            
+            # Handle different result statuses
+            if result['status'] == 'SOLVED':
+                ai_response = f"Excellent! Your mathematical reasoning is correct. {result['feedback']}"
+                is_verified = True
+            elif result['status'] == 'FAILED':
+                ai_response = f"I see an issue with your approach. {result['feedback']}"
+                is_verified = False
+            else:  # ERROR
+                ai_response = f"Let me help you with that. {result['feedback']}"
+                is_verified = None
+                
+            return jsonify({
+                "aiResponse": ai_response,
+                "proofCode": session['student_model']['current_proof_state'],
+                "isVerified": is_verified,
+                "verificationStatus": result['status']
+            })
+        else:
+            # Use regular metacognition processing for non-mathematical content
+            ai_response = metacognition.process_message(session, user_message)
+            session.modified = True
+            return jsonify({
+                "aiResponse": ai_response['ai_response_text'],
+                "proofCode": ai_response.get('proof_code', session['student_model']['current_proof_state']),
+                "isVerified": ai_response.get('is_verified')
+            })
     except Exception as e:
         app.logger.error(f"Error in handle_chat_message: {e}", exc_info=True)
         return jsonify({"error": "Internal server error."}), 500
@@ -250,11 +297,20 @@ def create_and_get_class(class_name: str, file_stream: Any, file_type: str) -> D
     response_json = get_llm_response(prompt, is_json=True)
     graph_data = json.loads(response_json)
 
+    # Initialize default knowledge state for each concept
+    default_knowledge_state = {}
+    for concept in graph_data.get("nodes", []):
+        default_knowledge_state[concept['id']] = {
+            'mu': 0.3,  # Default belief of mastery (30%)
+            'sigma': 0.5  # Default uncertainty
+        }
+    
     new_class = {
         "classId": class_id,
         "className": class_name,
         "concepts": graph_data.get("nodes", []),
         "edges": graph_data.get("edges", []),
+        "knowledgeState": default_knowledge_state,
     }
     CLASSES[class_id] = new_class
     
@@ -292,6 +348,557 @@ def add_class():
     except Exception as e:
         app.logger.error(f"Failed to add class '{class_name}': {e}", exc_info=True)
         return jsonify({"error": "Failed to process the document."}), 500
-    
+
+# ======================================================================================
+# == Dashboard API Endpoints
+# ======================================================================================
+
+@app.route('/api/dashboard/classes', methods=['GET'])
+def get_dashboard_classes():
+    """Get all classes with their health data for the dashboard."""
+    try:
+        dashboard_classes = []
+        for class_id, class_data in CLASSES.items():
+            # Calculate health score based on knowledge state
+            knowledge_state = class_data.get('knowledgeState', {})
+            concepts = class_data.get('concepts', [])
+            
+            if concepts:
+                total_mu = sum(knowledge_state.get(concept['id'], {}).get('mu', 0) for concept in concepts)
+                health_score = round((total_mu / len(concepts)) * 100)
+            else:
+                health_score = 0
+            
+            # Count mastered concepts (mu >= 0.7)
+            concepts_mastered = sum(1 for concept in concepts 
+                                  if knowledge_state.get(concept['id'], {}).get('mu', 0) >= 0.7)
+            
+            # Determine plant state
+            if health_score >= 80:
+                plant_state = 'flourishing'
+            elif health_score >= 60:
+                plant_state = 'healthy'
+            elif health_score >= 40:
+                plant_state = 'wilting'
+            else:
+                plant_state = 'struggling'
+            
+            dashboard_class = {
+                'id': class_id,
+                'name': class_data['className'],
+                'healthScore': health_score,
+                'conceptsMastered': concepts_mastered,
+                'totalConcepts': len(concepts),
+                'lastSession': class_data.get('lastSession'),
+                'plantState': plant_state,
+                'createdAt': class_data.get('createdAt'),
+                'updatedAt': class_data.get('updatedAt'),
+            }
+            dashboard_classes.append(dashboard_class)
+        
+        return jsonify(dashboard_classes)
+        
+    except Exception as e:
+        app.logger.error(f"Failed to get dashboard classes: {e}", exc_info=True)
+        return jsonify({"error": "Failed to retrieve dashboard data."}), 500
+
+@app.route('/api/dashboard/stats', methods=['GET'])
+def get_dashboard_stats():
+    """Get quick stats for the dashboard."""
+    try:
+        total_concepts_mastered = 0
+        total_classes = len(CLASSES)
+        total_health_score = 0
+        
+        for class_data in CLASSES.values():
+            knowledge_state = class_data.get('knowledgeState', {})
+            concepts = class_data.get('concepts', [])
+            
+            # Count mastered concepts
+            concepts_mastered = sum(1 for concept in concepts 
+                                  if knowledge_state.get(concept['id'], {}).get('mu', 0) >= 0.7)
+            total_concepts_mastered += concepts_mastered
+            
+            # Calculate health score
+            if concepts:
+                total_mu = sum(knowledge_state.get(concept['id'], {}).get('mu', 0) for concept in concepts)
+                health_score = (total_mu / len(concepts)) * 100
+                total_health_score += health_score
+        
+        average_health_score = round(total_health_score / total_classes) if total_classes > 0 else 0
+        
+        # TODO: Calculate from session data
+        current_streak = 3
+        flow_state_time = 45
+        
+        stats = {
+            'totalConceptsMastered': total_concepts_mastered,
+            'currentStreak': current_streak,
+            'flowStateTime': flow_state_time,
+            'totalClasses': total_classes,
+            'averageHealthScore': average_health_score,
+        }
+        
+        return jsonify(stats)
+        
+    except Exception as e:
+        app.logger.error(f"Failed to get dashboard stats: {e}", exc_info=True)
+        return jsonify({"error": "Failed to retrieve dashboard stats."}), 500
+
+@app.route('/api/dashboard/class/<class_id>', methods=['GET'])
+def get_class_data(class_id):
+    """Get detailed class data for a specific class."""
+    try:
+        if class_id not in CLASSES:
+            return jsonify({"error": "Class not found."}), 404
+        
+        class_data = CLASSES[class_id]
+        
+        # Ensure knowledge state exists and is properly initialized
+        knowledge_state = class_data.get('knowledgeState', {})
+        concepts = class_data.get('concepts', [])
+        
+        # Initialize knowledge state for any missing concepts
+        for concept in concepts:
+            if concept['id'] not in knowledge_state:
+                knowledge_state[concept['id']] = {
+                    'mu': 0.3,  # Default belief of mastery (30%)
+                    'sigma': 0.5  # Default uncertainty
+                }
+        
+        # Transform the data to match frontend expectations
+        response_data = {
+            'id': class_data.get('classId'),
+            'name': class_data.get('className'),
+            'healthScore': class_data.get('healthScore', 0),
+            'lastSession': class_data.get('lastSession'),
+            'nodes': concepts,  # Transform concepts to nodes
+            'edges': class_data.get('edges', []),
+            'knowledgeState': knowledge_state
+        }
+        
+        return jsonify(response_data)
+        
+    except Exception as e:
+        app.logger.error(f"Failed to get class data for {class_id}: {e}", exc_info=True)
+        return jsonify({"error": "Failed to retrieve class data."}), 500
+
+@app.route('/api/dashboard/update_session', methods=['POST'])
+def update_session_data():
+    """Update session data when a class session ends."""
+    try:
+        data = request.get_json()
+        class_id = data.get('classId')
+        knowledge_state = data.get('knowledgeState', {})
+        
+        if not class_id or class_id not in CLASSES:
+            return jsonify({"error": "Invalid class ID."}), 400
+        
+        # Update the class data
+        CLASSES[class_id]['knowledgeState'] = knowledge_state
+        CLASSES[class_id]['lastSession'] = datetime.now().isoformat()
+        CLASSES[class_id]['updatedAt'] = datetime.now().isoformat()
+        
+        # Save to persistent storage
+        save_classes(CLASSES)
+        
+        return jsonify({"message": "Session data updated successfully."})
+        
+    except Exception as e:
+        app.logger.error(f"Failed to update session data: {e}", exc_info=True)
+        return jsonify({"error": "Failed to update session data."}), 500
+
+# ======================================================================================
+# == NEW: Enhanced Lean Verification Endpoints
+# ======================================================================================
+
+@app.route('/api/auto_solve_proof', methods=['POST'])
+def auto_solve_proof():
+    """Trigger AI auto-solving of a proof with configurable attempts."""
+    try:
+        data = request.get_json()
+        proof_state = data.get('proof_state', '')
+        max_attempts = data.get('max_attempts', None)
+        
+        if not proof_state:
+            return jsonify({"error": "Proof state is required."}), 400
+        
+        # Run auto-solve
+        result = lean_verifier_instance.auto_solve_proof(proof_state, max_attempts)
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        app.logger.error(f"Auto-solve failed: {e}", exc_info=True)
+        return jsonify({"error": f"Auto-solve failed: {str(e)}"}), 500
+
+@app.route('/api/developer_mode', methods=['POST'])
+def toggle_developer_mode():
+    """Toggle developer mode on/off."""
+    try:
+        data = request.get_json()
+        enabled = data.get('enabled', False)
+        max_attempts = data.get('max_attempts', 5)
+        
+        lean_verifier_instance.set_developer_mode(enabled)
+        lean_verifier_instance.set_max_attempts(max_attempts)
+        
+        return jsonify({
+            "message": f"Developer mode {'enabled' if enabled else 'disabled'}",
+            "developer_mode": enabled,
+            "max_attempts": max_attempts
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Failed to toggle developer mode: {e}", exc_info=True)
+        return jsonify({"error": f"Failed to toggle developer mode: {str(e)}"}), 500
+
+@app.route('/api/developer_logs', methods=['GET'])
+def get_developer_logs():
+    """Get developer mode logs and configuration."""
+    try:
+        logs = lean_verifier_instance.get_developer_logs()
+        return jsonify(logs)
+        
+    except Exception as e:
+        app.logger.error(f"Failed to get developer logs: {e}", exc_info=True)
+        return jsonify({"error": f"Failed to get developer logs: {str(e)}"}), 500
+
+@app.route('/api/developer_logs/clear', methods=['POST'])
+def clear_developer_logs():
+    """Clear all developer logs."""
+    try:
+        developer_logger.clear_logs()
+        app.logger.info("Developer logs cleared successfully")
+        return jsonify({"message": "Developer logs cleared successfully"})
+        
+    except Exception as e:
+        app.logger.error(f"Failed to clear developer logs: {e}", exc_info=True)
+        return jsonify({"error": f"Failed to clear developer logs: {str(e)}"}), 500
+
+@app.route('/api/upload_homework', methods=['POST'])
+def upload_homework():
+    """Enhanced homework processing with auto-solve functionality."""
+    try:
+        if 'file' not in request.files:
+            return jsonify({"error": "No file provided."}), 400
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({"error": "No file selected."}), 400
+        
+        # Extract text from file
+        file_content = ""
+        if file.filename.endswith('.pdf'):
+            file_content = extract_text_from_pdf(file.stream)
+        elif file.filename.endswith('.txt'):
+            file_content = file.read().decode('utf-8')
+        else:
+            return jsonify({"error": "Unsupported file type. Please upload PDF or TXT."}), 400
+        
+        # Parse mathematical content into Lean theorem statements
+        # This is a simplified version - in practice, you'd want more sophisticated parsing
+        lean_theorems = []
+        lines = file_content.split('\n')
+        current_theorem = ""
+        
+        for line in lines:
+            if any(keyword in line.lower() for keyword in ['theorem', 'lemma', 'proposition']):
+                if current_theorem:
+                    lean_theorems.append(current_theorem.strip())
+                current_theorem = line
+            elif current_theorem and line.strip():
+                current_theorem += "\n" + line
+        
+        if current_theorem:
+            lean_theorems.append(current_theorem.strip())
+        
+        # If no theorems found, create a basic one from the content
+        if not lean_theorems:
+            lean_theorems = [f"theorem homework_problem : True := by\n  sorry"]
+        
+        # Initialize proof states with "sorry"
+        proof_states = []
+        for theorem in lean_theorems:
+            if "sorry" not in theorem:
+                theorem += "\n  sorry"
+            proof_states.append(theorem)
+        
+        # Enable developer mode for homework auto-solve to log attempts
+        original_developer_mode = lean_verifier_instance.developer_mode
+        lean_verifier_instance.developer_mode = True
+        
+        # Trigger auto-solve for each proof
+        solutions = []
+        for i, proof_state in enumerate(proof_states):
+            try:
+                result = lean_verifier_instance.auto_solve_proof(proof_state)
+                solutions.append({
+                    "theorem_index": i,
+                    "original_state": proof_states[i],
+                    "solution": result
+                })
+            except Exception as e:
+                solutions.append({
+                    "theorem_index": i,
+                    "original_state": proof_states[i],
+                    "solution": {"solved": False, "error": str(e)}
+                })
+        
+        # Restore original developer mode setting
+        lean_verifier_instance.developer_mode = original_developer_mode
+        
+        return jsonify({
+            "file_name": file.filename,
+            "theorems_found": len(lean_theorems),
+            "proof_states": proof_states,
+            "solutions": solutions
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Homework upload failed: {e}", exc_info=True)
+        return jsonify({"error": f"Homework upload failed: {str(e)}"}), 500
+
+# ======================================================================================
+# == LLM Performance Testing Endpoints
+# ======================================================================================
+
+@app.route('/api/performance/run_tests', methods=['POST'])
+def run_performance_tests():
+    """Run the complete LLM performance test suite."""
+    try:
+        app.logger.info("Starting LLM performance test suite")
+        
+        # Run the full test suite
+        report = performance_tester.run_full_test_suite()
+        
+        # Save the report
+        filename = f"llm_performance_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
+        filepath = performance_tester.save_report(report, filename)
+        
+        # Return summary and file path
+        return jsonify({
+            "message": "Performance test suite completed successfully",
+            "report_file": filename,
+            "summary": {
+                "total_tests": report.total_tests,
+                "successful_tests": report.successful_tests,
+                "failed_tests": report.failed_tests,
+                "success_rate": report.success_rate,
+                "average_attempts": report.average_attempts,
+                "average_time": report.average_time
+            },
+            "results_by_difficulty": report.results_by_difficulty,
+            "results_by_category": report.results_by_category,
+            "llm_quality_metrics": report.llm_quality_metrics
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Performance testing failed: {e}", exc_info=True)
+        return jsonify({"error": f"Performance testing failed: {str(e)}"}), 500
+
+@app.route('/api/performance/test_cases', methods=['GET'])
+def get_test_cases():
+    """Get all available test cases."""
+    try:
+        test_cases = []
+        for test_case in performance_tester.test_cases:
+            test_cases.append({
+                "name": test_case.name,
+                "description": test_case.description,
+                "proof_state": test_case.proof_state,
+                "expected_tactic": test_case.expected_tactic,
+                "difficulty": test_case.difficulty,
+                "category": test_case.category,
+                "max_attempts": test_case.max_attempts
+            })
+        
+        return jsonify({
+            "test_cases": test_cases,
+            "total_count": len(test_cases)
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Failed to get test cases: {e}", exc_info=True)
+        return jsonify({"error": f"Failed to get test cases: {str(e)}"}), 500
+
+@app.route('/api/performance/run_single_test', methods=['POST'])
+def run_single_test():
+    """Run a single test case by name."""
+    try:
+        data = request.get_json()
+        test_name = data.get('test_name')
+        
+        if not test_name:
+            return jsonify({"error": "test_name is required"}), 400
+        
+        # Find the test case
+        test_case = None
+        for tc in performance_tester.test_cases:
+            if tc.name == test_name:
+                test_case = tc
+                break
+        
+        if not test_case:
+            return jsonify({"error": f"Test case '{test_name}' not found"}), 404
+        
+        # Run the test
+        result = performance_tester.run_single_test(test_case)
+        
+        return jsonify({
+            "test_name": test_case.name,
+            "success": result.success,
+            "attempts_used": result.attempts_used,
+            "total_time": result.total_time,
+            "attempts": result.attempts,
+            "final_proof": result.final_proof,
+            "error_messages": result.error_messages,
+            "llm_response_quality": result.llm_response_quality
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Single test execution failed: {e}", exc_info=True)
+        return jsonify({"error": f"Single test execution failed: {str(e)}"}), 500
+
+@app.route('/api/performance/reports', methods=['GET'])
+def get_performance_reports():
+    """Get list of available performance reports."""
+    try:
+        reports_dir = os.path.join(os.path.dirname(__file__), "reports")
+        if not os.path.exists(reports_dir):
+            return jsonify({"reports": [], "total_count": 0})
+        
+        reports = []
+        for filename in os.listdir(reports_dir):
+            if filename.endswith('.md'):
+                filepath = os.path.join(reports_dir, filename)
+                stat = os.stat(filepath)
+                reports.append({
+                    "filename": filename,
+                    "created": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                    "size": stat.st_size
+                })
+        
+        # Sort by creation time (newest first)
+        reports.sort(key=lambda x: x['created'], reverse=True)
+        
+        return jsonify({
+            "reports": reports,
+            "total_count": len(reports)
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Failed to get performance reports: {e}", exc_info=True)
+        return jsonify({"error": f"Failed to get performance reports: {str(e)}"}), 500
+
+@app.route('/api/performance/download_report/<filename>', methods=['GET'])
+def download_performance_report(filename):
+    """Download a specific performance report."""
+    try:
+        reports_dir = os.path.join(os.path.dirname(__file__), "reports")
+        filepath = os.path.join(reports_dir, filename)
+        
+        if not os.path.exists(filepath):
+            return jsonify({"error": f"Report '{filename}' not found"}), 404
+        
+        with open(filepath, 'r') as f:
+            content = f.read()
+        
+        return jsonify({
+            "filename": filename,
+            "content": content
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Failed to download report: {e}", exc_info=True)
+        return jsonify({"error": f"Failed to download report: {str(e)}"}), 500
+
+@app.route('/api/performance/stats', methods=['GET'])
+def get_performance_stats():
+    """Get comprehensive performance statistics."""
+    try:
+        stats = lean_verifier_instance.get_performance_stats()
+        return jsonify(stats)
+        
+    except Exception as e:
+        app.logger.error(f"Failed to get performance stats: {e}", exc_info=True)
+        return jsonify({"error": f"Failed to get performance stats: {str(e)}"}), 500
+
+@app.route('/api/performance/cache/toggle', methods=['POST'])
+def toggle_cache():
+    """Toggle proof caching on/off."""
+    try:
+        data = request.get_json() or {}
+        enabled = data.get('enabled')
+        
+        cache_status = lean_verifier_instance.toggle_cache(enabled)
+        return jsonify({
+            "cache_enabled": cache_status,
+            "message": f"Proof caching {'enabled' if cache_status else 'disabled'}"
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Failed to toggle cache: {e}", exc_info=True)
+        return jsonify({"error": f"Failed to toggle cache: {str(e)}"}), 500
+
+@app.route('/api/performance/cache/clear', methods=['POST'])
+def clear_cache():
+    """Clear the proof cache."""
+    try:
+        lean_verifier_instance.clear_cache()
+        return jsonify({"message": "Proof cache cleared successfully"})
+        
+    except Exception as e:
+        app.logger.error(f"Failed to clear cache: {e}", exc_info=True)
+        return jsonify({"error": f"Failed to clear cache: {str(e)}"}), 500
+
+@app.route('/api/performance/environment/optimize', methods=['POST'])
+def optimize_environment():
+    """Manually trigger Lean environment optimization."""
+    try:
+        data = request.get_json() or {}
+        force_rebuild = data.get('force_rebuild', False)
+        
+        success = lean_verifier_instance.optimize_environment(force_rebuild)
+        
+        if success:
+            return jsonify({
+                "success": True,
+                "message": "Lean environment optimization completed successfully"
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "message": "Lean environment optimization failed"
+            }), 500
+        
+    except Exception as e:
+        app.logger.error(f"Failed to optimize environment: {e}", exc_info=True)
+        return jsonify({"error": f"Failed to optimize environment: {str(e)}"}), 500
+
+@app.route('/api/performance/cache/stats', methods=['GET'])
+def get_cache_stats():
+    """Get detailed cache statistics."""
+    try:
+        from proof_cache import proof_cache
+        stats = proof_cache.get_cache_stats()
+        return jsonify(stats)
+        
+    except Exception as e:
+        app.logger.error(f"Failed to get cache stats: {e}", exc_info=True)
+        return jsonify({"error": f"Failed to get cache stats: {str(e)}"}), 500
+
+@app.route('/api/performance/environment/stats', methods=['GET'])
+def get_environment_stats():
+    """Get Lean environment statistics."""
+    try:
+        from lean_environment_manager import get_lean_environment_status
+        stats = get_lean_environment_status()
+        return jsonify(stats)
+        
+    except Exception as e:
+        app.logger.error(f"Failed to get environment stats: {e}", exc_info=True)
+        return jsonify({"error": f"Failed to get environment stats: {str(e)}"}), 500
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
