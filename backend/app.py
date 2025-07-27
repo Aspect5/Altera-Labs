@@ -5,6 +5,7 @@ import uuid
 import json
 import logging
 import sys # --- ADDED: To allow exiting on critical errors ---
+import random # --- ADDED: For Proving Agent MVP simulation ---
 from pathlib import Path
 from typing import Dict, Any
 
@@ -14,11 +15,11 @@ from flask_cors import CORS
 import fitz
 import vertexai # --- ADDED: Import the Vertex AI library ---
 
-from backend import prompts
-from backend import metacognition
-from backend import rag_manager
-from backend.socratic_auditor import get_llm_response
-from backend.lean_verifier import lean_verifier_instance 
+from . import prompts
+from . import metacognition
+from . import rag_manager
+from .socratic_auditor import get_llm_response
+from .lean_verifier import lean_verifier_instance 
 
 # --- FIXED: Load environment variables and initialize AI services at startup ---
 load_dotenv()
@@ -28,16 +29,14 @@ try:
     PROJECT_ID = os.environ.get("VERTEX_AI_PROJECT_ID")
     LOCATION = os.environ.get("VERTEX_AI_LOCATION")
 
-    if not PROJECT_ID or not LOCATION:
-        logging.critical("FATAL: VERTEX_AI_PROJECT_ID and VERTEX_AI_LOCATION environment variables must be set.")
-        sys.exit(1) 
-
-    vertexai.init(project=PROJECT_ID, location=LOCATION)
-    logging.info(f"Vertex AI initialized successfully for project '{PROJECT_ID}' in '{LOCATION}'.")
+    if PROJECT_ID and LOCATION:
+        vertexai.init(project=PROJECT_ID, location=LOCATION)
+        logging.info(f"Vertex AI initialized successfully for project '{PROJECT_ID}' in '{LOCATION}'.")
+    else:
+        logging.warning("VERTEX_AI_PROJECT_ID and VERTEX_AI_LOCATION not set. Running in development mode without Vertex AI.")
 
 except Exception as e:
-    logging.critical(f"FATAL: An unexpected error occurred during Vertex AI initialization: {e}")
-    sys.exit(1) 
+    logging.warning(f"Vertex AI initialization failed: {e}. Continuing without Vertex AI.")
 
 # --- Flask App Initialization ---
 app = Flask(__name__)
@@ -45,7 +44,33 @@ app.logger.setLevel(logging.INFO)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-secret-key-replace-in-prod")
 CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
 
-CLASSES: Dict[str, Dict[str, Any]] = {}
+# --- PERSISTENT CLASS STORAGE ---
+CLASSES_FILE = Path("/workspaces/Altera-Labs/data/classes.json")
+CLASSES_FILE.parent.mkdir(exist_ok=True)
+
+def load_classes() -> Dict[str, Dict[str, Any]]:
+    """Load classes from persistent storage."""
+    if CLASSES_FILE.exists():
+        try:
+            with open(CLASSES_FILE, 'r') as f:
+                return json.load(f)
+        except Exception as e:
+            app.logger.error(f"Failed to load classes: {e}")
+            return {}
+    return {}
+
+def save_classes(classes: Dict[str, Dict[str, Any]]) -> None:
+    """Save classes to persistent storage."""
+    try:
+        with open(CLASSES_FILE, 'w') as f:
+            json.dump(classes, f, indent=2)
+        app.logger.info(f"Saved {len(classes)} classes to persistent storage")
+    except Exception as e:
+        app.logger.error(f"Failed to save classes: {e}")
+
+# Load existing classes on startup
+CLASSES: Dict[str, Dict[str, Any]] = load_classes()
+app.logger.info(f"Loaded {len(CLASSES)} existing classes from persistent storage")
 
 def extract_text_from_pdf(file_stream) -> str:
     try:
@@ -66,20 +91,51 @@ def health_check():
 @app.route('/api/start_session', methods=['POST'])
 def start_session():
     data = request.get_json()
-    session['mode'] = data.get('mode', 'homework')
-    session['user_id'] = data.get('userId', str(uuid.uuid4()))
+    mode = data.get('mode', 'homework')
+    session['user_id'] = str(uuid.uuid4())
+    session['mode'] = mode
     session['student_model'] = {
-        "metacognitive_stage": metacognition.MetacognitiveStage.PLANNING_GOAL.value,
-        "current_proof_state": "import Mathlib.Data.Real.Basic\n\nexample (a b : ℝ) : a * b = b * a := by\n  sorry",
-        "error_history": [], "affective_state": "NEUTRAL", "knowledge_components": {}
+        'current_proof_state': "theorem example (a b : ℝ) : a * b = b * a := by\n  sorry",
+        'affective_state': 'NEUTRAL',
+        'confidence': 0.5,
+        'difficulty_progress': 0.0,
+        'progress_history': []
     }
-    session.modified = True
-    return jsonify({
-        "message": f"Session started in {session['mode']} mode.",
-        "sessionId": session['user_id'],
-        "proofCode": session['student_model']['current_proof_state'],
-        "aiResponse": prompts.PLANNING_PROMPT_INITIAL
-    })
+    
+    # --- FIXED: Properly initialize the metacognitive stage ---
+    metacognition.initialize_session_stage(session)
+    
+    # --- FIXED: Generate dynamic initial response instead of static prompt ---
+    try:
+        initial_prompt = f"""
+You are a helpful math tutor starting a new session with a student.
+The session mode is: {mode}
+
+Provide a warm, encouraging welcome message that:
+1. Greets the student warmly
+2. Explains that you're here to help them with their mathematical thinking
+3. Asks them to start by understanding the goal of what they're trying to prove
+4. Encourages them to explain the problem in their own words
+
+Keep your response conversational and supportive. Do NOT mention syllabus analysis or class concepts.
+"""
+        initial_response = get_llm_response(initial_prompt)
+        
+        return jsonify({
+            "message": f"Session started in {session['mode']} mode.",
+            "sessionId": session['user_id'],
+            "proofCode": session['student_model']['current_proof_state'],
+            "aiResponse": initial_response
+        })
+    except Exception as e:
+        app.logger.error(f"Error generating initial response: {e}")
+        # Fallback to a simple welcome message
+        return jsonify({
+            "message": f"Session started in {session['mode']} mode.",
+            "sessionId": session['user_id'],
+            "proofCode": session['student_model']['current_proof_state'],
+            "aiResponse": "Hello! I'm here to help you with your mathematical thinking. Let's start by understanding what we're trying to prove. Can you explain the goal in your own words?"
+        })
 
 @app.route('/api/chat', methods=['POST'])
 def handle_chat_message():
@@ -88,16 +144,11 @@ def handle_chat_message():
     data = request.get_json()
     user_message = data['message']
     try:
-        updated_student_model, ai_response = metacognition.process_message(
-            student_model=session['student_model'],
-            user_message=user_message,
-            mode=session.get('mode', 'homework')
-        )
-        session['student_model'] = updated_student_model
+        ai_response = metacognition.process_message(session, user_message)
         session.modified = True
         return jsonify({
             "aiResponse": ai_response['ai_response_text'],
-            "proofCode": updated_student_model['current_proof_state'],
+            "proofCode": ai_response.get('proof_code', session['student_model']['current_proof_state']),
             "isVerified": ai_response.get('is_verified')
         })
     except Exception as e:
@@ -177,43 +228,70 @@ def upload_assignment():
         return jsonify({"message": "File uploaded successfully.", "filePath": file_path}), 200
     return jsonify({"error": "Invalid file."}), 400
 
+def create_and_get_class(class_name: str, file_stream: Any, file_type: str) -> Dict[str, Any]:
+    # Check if class already exists to prevent reprocessing
+    for class_id, existing_class in CLASSES.items():
+        if existing_class['className'] == class_name:
+            app.logger.info(f"Class '{class_name}' already exists, returning existing data")
+            return existing_class
+    
+    # This is a helper to centralize the class creation logic
+    # TODO: In the future, this is where the "Proving Agent" logic will go.
+    class_id = str(uuid.uuid4())
+    
+    # For now, we just extract text regardless of type
+    if file_stream.filename.endswith('.pdf'):
+        document_text = extract_text_from_pdf(file_stream)
+    else:
+        document_text = file_stream.read().decode('utf-8')
+    
+    prompt = prompts.SYLLABUS_GRAPH_PROMPT.format(syllabus_text=document_text)
+    # --- FIXED: Pass is_json=True to ensure the LLM returns valid JSON ---
+    response_json = get_llm_response(prompt, is_json=True)
+    graph_data = json.loads(response_json)
+
+    new_class = {
+        "classId": class_id,
+        "className": class_name,
+        "concepts": graph_data.get("nodes", []),
+        "edges": graph_data.get("edges", []),
+    }
+    CLASSES[class_id] = new_class
+    
+    # Save to persistent storage
+    save_classes(CLASSES)
+    
+    app.logger.info(f"Added new class '{class_name}' with {len(new_class['concepts'])} concepts and {len(new_class['edges'])} edges.")
+    return new_class
+
 @app.route('/api/add_class', methods=['POST'])
 def add_class():
-    if 'syllabus' not in request.files or 'className' not in request.form:
-        return jsonify({"error": "Missing form data: 'syllabus' file and 'className' are required."}), 400
-    
-    file = request.files['syllabus']
+    if 'className' not in request.form:
+        return jsonify({"error": "Request must include 'className'."}), 400
+
     class_name = request.form['className']
+    syllabus_file = request.files.get('syllabus')
+    homework_file = request.files.get('homework')
+
+    if not syllabus_file and not homework_file:
+        return jsonify({"error": "Request must include a 'syllabus' or 'homework' file."}), 400
 
     try:
-        # Extract text from the uploaded file (PDF or text)
-        syllabus_text = extract_text_from_pdf(file) if file.filename.lower().endswith('.pdf') else file.read().decode('utf-8')
+        if syllabus_file:
+            # If a syllabus is provided, it's the source of truth.
+            new_class = create_and_get_class(class_name, syllabus_file, 'syllabus')
+            new_class['solutionStatus'] = 'SYLLABUS_BASED'
+        else:
+            # If only homework is provided, simulate the Proving Agent
+            new_class = create_and_get_class(class_name, homework_file, 'homework')
+            # MVP Simulation: Randomly decide if the agent "solved" it.
+            new_class['solutionStatus'] = random.choice(['SOLVED', 'FAILED'])
         
-        # --- Use the single, unified prompt to generate the entire graph ---
-        graph_prompt = prompts.SYLLABUS_GRAPH_PROMPT.format(syllabus_text=syllabus_text[:8000]) # Truncate for safety
-        
-        # Make one call to get the complete graph
-        graph_response_str = get_llm_response(graph_prompt, is_json=True)
-        graph_data = json.loads(graph_response_str)
+        return jsonify(new_class)
 
-        # The prompt returns 'nodes', but the frontend expects 'concepts'
-        concepts = graph_data.get("nodes", [])
-        edges = graph_data.get("edges", [])
-
-        class_id = str(uuid.uuid4())
-        CLASSES[class_id] = {"name": class_name, "concepts": concepts, "edges": edges}
-        
-        app.logger.info(f"Added new class '{class_name}' with {len(concepts)} concepts and {len(edges)} edges.")
-        
-        # Return the data in the format the frontend expects
-        return jsonify({"classId": class_id, "className": class_name, "concepts": concepts, "edges": edges})
-        
-    except json.JSONDecodeError as e:
-        app.logger.error(f"Error decoding JSON from LLM response: {e}\nResponse was: {graph_response_str}", exc_info=True)
-        return jsonify({"error": "Failed to parse AI response."}), 500
     except Exception as e:
-        app.logger.error(f"Error in /add_class: {e}", exc_info=True)
-        return jsonify({"error": "Server error while analyzing syllabus."}), 500
+        app.logger.error(f"Failed to add class '{class_name}': {e}", exc_info=True)
+        return jsonify({"error": "Failed to process the document."}), 500
     
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

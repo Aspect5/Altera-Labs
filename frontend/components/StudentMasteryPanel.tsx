@@ -5,20 +5,36 @@ import { calculateMasteryProbability } from '../services/bayesianService';
 interface StudentMasteryPanelProps {
     nodes: GraphNode[];
     knowledgeState: KnowledgeState;
-    onKnowledgeStateChange: (nodeId: string, value: Partial<{ mu: number; sigma: number }>) => void;
+    onKnowledgeStateChange: (nodeId: string, value: Partial<{mu: number, sigma: number}>) => void;
 }
 
-const getMasteryColorClass = (mu: number): string => {
-    if (mu > 0.8) return 'accent-green-500';
-    if (mu > 0.4) return 'accent-yellow-400';
-    if (mu > 0.0) return 'accent-red-500';
-    return 'accent-gray-500';
-};
-
 const StudentMasteryPanel: React.FC<StudentMasteryPanelProps> = ({ nodes, knowledgeState, onKnowledgeStateChange }) => {
+    
+    const handleRandomize = () => {
+        nodes.forEach(node => {
+            // Generate random mastery (mu) between 0 and 1
+            const randomMu = Math.random();
+            // Generate random uncertainty (sigma) between 0.1 and 0.5
+            const randomSigma = 0.1 + Math.random() * 0.4;
+            
+            onKnowledgeStateChange(node.id, {
+                mu: randomMu,
+                sigma: randomSigma
+            });
+        });
+    };
+
     return (
         <div className="bg-slate-800 p-4 rounded-lg shadow-lg">
-            <h2 className="text-xl font-semibold text-cyan-400 mb-3">2. Simulate Student Knowledge</h2>
+            <div className="flex justify-between items-center mb-3">
+                <h2 className="text-xl font-semibold text-cyan-400">2. Simulate Student Knowledge</h2>
+                <button
+                    onClick={handleRandomize}
+                    className="px-3 py-1 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-md transition-colors"
+                >
+                    Randomize
+                </button>
+            </div>
             <div className="space-y-5">
                 {nodes.map(node => {
                     const state = knowledgeState[node.id] || { mu: 0, sigma: 0.5 };
@@ -34,36 +50,44 @@ const StudentMasteryPanel: React.FC<StudentMasteryPanelProps> = ({ nodes, knowle
                                </span>
                             </p>
                             {/* Mastery (mu) Slider */}
-                            <div>
-                                <label htmlFor={`mu-${node.id}`} className="block text-xs font-medium text-slate-400">
-                                   Mastery (μ): <span className="font-bold text-slate-200">{Math.round(state.mu * 100)}%</span>
+                            <div className="mb-3">
+                                <label className="block text-sm text-slate-400 mb-1">
+                                    Mastery (μ): {state.mu.toFixed(2)}
                                 </label>
                                 <input
-                                    id={`mu-${node.id}`}
                                     type="range"
                                     min="0"
                                     max="1"
                                     step="0.01"
                                     value={state.mu}
                                     onChange={(e) => onKnowledgeStateChange(node.id, { mu: parseFloat(e.target.value) })}
-                                    className={`w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer ${getMasteryColorClass(state.mu)}`}
+                                    className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer slider"
                                 />
+                                <div className="flex justify-between text-xs text-slate-500 mt-1">
+                                    <span>0%</span>
+                                    <span>50%</span>
+                                    <span>100%</span>
+                                </div>
                             </div>
-                             {/* Uncertainty (sigma) Slider */}
-                            <div className="mt-2">
-                                <label htmlFor={`sigma-${node.id}`} className="block text-xs font-medium text-slate-400">
-                                   Uncertainty (σ): <span className="font-bold text-slate-200">{uncertaintyPercent}%</span>
+
+                            {/* Uncertainty (sigma) Slider */}
+                            <div>
+                                <label className="block text-sm text-slate-400 mb-1">
+                                    Uncertainty (σ): {state.sigma.toFixed(2)} ({uncertaintyPercent}%)
                                 </label>
                                 <input
-                                    id={`sigma-${node.id}`}
                                     type="range"
-                                    min="0.01"
+                                    min="0.1"
                                     max="0.5"
                                     step="0.01"
                                     value={state.sigma}
                                     onChange={(e) => onKnowledgeStateChange(node.id, { sigma: parseFloat(e.target.value) })}
-                                    className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-sky-400"
+                                    className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer slider"
                                 />
+                                <div className="flex justify-between text-xs text-slate-500 mt-1">
+                                    <span>Low</span>
+                                    <span>High</span>
+                                </div>
                             </div>
                         </div>
                     );

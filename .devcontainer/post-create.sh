@@ -27,6 +27,10 @@ cd "$LEAN_PROJECT_DIR"
 echo "--- Building Lean project (will be fast if dependencies are cached)... ---"
 lake build
 
+echo "--- Setting up root dependencies (Tailwind, PostCSS, etc.) ---"
+cd "$WORKSPACE_ROOT"
+npm install
+
 echo "--- Setting up frontend dependencies ---"
 cd "$WORKSPACE_ROOT/frontend"
 npm install

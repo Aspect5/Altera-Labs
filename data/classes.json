@@ -1,0 +1,208 @@
+{
+  "1de38c00-5dbe-48bd-8efd-a6b0eaed8755": {
+    "classId": "1de38c00-5dbe-48bd-8efd-a6b0eaed8755",
+    "className": "Algebra",
+    "concepts": [
+      {
+        "id": "abstract_algebra",
+        "label": "Abstract Algebra"
+      },
+      {
+        "id": "proofs",
+        "label": "Proofs"
+      },
+      {
+        "id": "group_theory",
+        "label": "Group Theory"
+      },
+      {
+        "id": "groups",
+        "label": "Groups"
+      },
+      {
+        "id": "subgroups",
+        "label": "Subgroups"
+      },
+      {
+        "id": "homomorphisms",
+        "label": "Homomorphisms"
+      },
+      {
+        "id": "quotients",
+        "label": "Quotients"
+      },
+      {
+        "id": "lagranges_theorem",
+        "label": "Lagrange's Theorem"
+      },
+      {
+        "id": "cauchys_theorem",
+        "label": "Cauchy's Theorem"
+      },
+      {
+        "id": "orbit_counting_techniques",
+        "label": "Orbit Counting Techniques"
+      },
+      {
+        "id": "classification_of_finite_abelian_groups",
+        "label": "Classification of Finite Abelian Groups"
+      },
+      {
+        "id": "permutation_groups",
+        "label": "Permutation Groups"
+      },
+      {
+        "id": "dihedral_groups",
+        "label": "Dihedral Groups"
+      },
+      {
+        "id": "matrix_groups",
+        "label": "Matrix Groups"
+      },
+      {
+        "id": "finite_rotation_groups",
+        "label": "Finite Rotation Groups"
+      },
+      {
+        "id": "geometric_symmetry_groups",
+        "label": "Geometric Symmetry Groups"
+      },
+      {
+        "id": "classification_of_wallpaper_groups",
+        "label": "Classification of Wallpaper Groups"
+      }
+    ],
+    "edges": [
+      {
+        "source": "proofs",
+        "target": "abstract_algebra",
+        "weight": 0.9
+      },
+      {
+        "source": "group_theory",
+        "target": "abstract_algebra",
+        "weight": 0.9
+      },
+      {
+        "source": "proofs",
+        "target": "group_theory",
+        "weight": 0.9
+      },
+      {
+        "source": "groups",
+        "target": "group_theory",
+        "weight": 0.9
+      },
+      {
+        "source": "groups",
+        "target": "subgroups",
+        "weight": 0.9
+      },
+      {
+        "source": "groups",
+        "target": "homomorphisms",
+        "weight": 0.9
+      },
+      {
+        "source": "groups",
+        "target": "quotients",
+        "weight": 0.9
+      },
+      {
+        "source": "subgroups",
+        "target": "group_theory",
+        "weight": 0.8
+      },
+      {
+        "source": "homomorphisms",
+        "target": "group_theory",
+        "weight": 0.8
+      },
+      {
+        "source": "quotients",
+        "target": "group_theory",
+        "weight": 0.8
+      },
+      {
+        "source": "groups",
+        "target": "lagranges_theorem",
+        "weight": 0.9
+      },
+      {
+        "source": "subgroups",
+        "target": "lagranges_theorem",
+        "weight": 0.9
+      },
+      {
+        "source": "groups",
+        "target": "cauchys_theorem",
+        "weight": 0.9
+      },
+      {
+        "source": "groups",
+        "target": "orbit_counting_techniques",
+        "weight": 0.9
+      },
+      {
+        "source": "groups",
+        "target": "classification_of_finite_abelian_groups",
+        "weight": 0.9
+      },
+      {
+        "source": "subgroups",
+        "target": "classification_of_finite_abelian_groups",
+        "weight": 0.7
+      },
+      {
+        "source": "homomorphisms",
+        "target": "classification_of_finite_abelian_groups",
+        "weight": 0.7
+      },
+      {
+        "source": "quotients",
+        "target": "classification_of_finite_abelian_groups",
+        "weight": 0.7
+      },
+      {
+        "source": "groups",
+        "target": "permutation_groups",
+        "weight": 0.9
+      },
+      {
+        "source": "groups",
+        "target": "dihedral_groups",
+        "weight": 0.9
+      },
+      {
+        "source": "groups",
+        "target": "matrix_groups",
+        "weight": 0.9
+      },
+      {
+        "source": "groups",
+        "target": "finite_rotation_groups",
+        "weight": 0.9
+      },
+      {
+        "source": "groups",
+        "target": "geometric_symmetry_groups",
+        "weight": 0.9
+      },
+      {
+        "source": "geometric_symmetry_groups",
+        "target": "classification_of_wallpaper_groups",
+        "weight": 0.9
+      },
+      {
+        "source": "group_theory",
+        "target": "classification_of_wallpaper_groups",
+        "weight": 0.8
+      },
+      {
+        "source": "orbit_counting_techniques",
+        "target": "classification_of_wallpaper_groups",
+        "weight": 0.7
+      }
+    ]
+  }
+}
