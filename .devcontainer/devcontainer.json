@@ -29,6 +29,10 @@
     }
   },
 
+  "settings": {
+    "python.defaultInterpreterPath": "/workspaces/Altera-Labs/.venv/bin/python"
+  },
+
   "forwardPorts": [5173, 5000],
   "mounts": [
       // Mounts the gcloud config directory from your local machine to the container

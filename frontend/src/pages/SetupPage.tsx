@@ -1,7 +1,8 @@
 // frontend/src/pages/SetupPage.tsx
 
 import React from 'react';
-import ClassCreationPanel from '../../components/ClassCreationPanel';
+import { ClassCreationPanel } from '../../components';
+import { SidebarVine } from '../../components/learning/ProgressFlowers';
 
 interface SetupPageProps {
   className: string;
@@ -19,7 +20,8 @@ const SetupPage: React.FC<SetupPageProps> = ({
   error,
 }) => {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 h-full">
+    <div className="relative grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 h-full">
+      <SidebarVine height={100} />
       <div className="lg:col-span-4 flex flex-col gap-6">
         <ClassCreationPanel
           className={className}

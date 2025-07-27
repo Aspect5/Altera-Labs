@@ -2,18 +2,32 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
-import { GraphNode, Edge, KnowledgeState, ChatMessage } from './types';
+import { GraphNode, Edge, KnowledgeState, ChatMessage, ClassSummary, QuickStats, ClassData, GamificationState } from './types/components';
 
 // API services
-import { createClass, getConceptExplanation, finalizeExam, verifyProofStep, startSession, sendMessage } from './services/aiService';
+import { 
+    createClass, 
+    getConceptExplanation, 
+    finalizeExam, 
+    verifyProofStep, 
+    startSession, 
+    sendMessage, 
+    dashboardService, 
+    gamificationService,
+    autoSolveProof,
+    toggleDeveloperMode,
+    getDeveloperLogs
+} from './services';
 
 // Page Components
 import SetupPage from './src/pages/SetupPage';
 import TutorPage from './src/pages/TutorPage';
+import DashboardPage from './src/pages/DashboardPage';
 
 // View Components
-import KnowledgeGraph from './components/KnowledgeGraph';
-import StudentMasteryPanel from './components/StudentMasteryPanel';
+import { KnowledgeGraph, StudentMasteryPanel } from './components';
+import { DeveloperPanel } from './components/developer/DeveloperPanel';
+import ViewModeSwitcher from './components/common/ViewModeSwitcher';
 
 // View types for different learning modes
 
@@ -27,7 +41,7 @@ const App: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [currentView, setCurrentView] = useState<string>('chat');
     const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
-    const [finalKnowledgeState, setFinalKnowledgeState] = useState<KnowledgeState | null>(null);
+    // const [finalKnowledgeState, setFinalKnowledgeState] = useState<KnowledgeState | null>(null);
     const [sessionStarted, setSessionStarted] = useState<boolean>(false);
     const [chatMode, setChatMode] = useState<'chat' | 'verify'>('chat');
     const [proofCode, setProofCode] = useState<string>("");
@@ -36,6 +50,155 @@ const App: React.FC = () => {
     
     // Add input state management
     const [chatInput, setChatInput] = useState<string>("");
+
+    // Dashboard state
+    const [classes, setClasses] = useState<ClassSummary[]>([]);
+    const [currentClassId, setCurrentClassId] = useState<string | null>(null);
+    const [showDashboard, setShowDashboard] = useState<boolean>(true);
+    const [isLoadingDashboard, setIsLoadingDashboard] = useState<boolean>(false);
+    const [dashboardError, setDashboardError] = useState<string | null>(null);
+
+    // Gamification state
+    const [gamificationState, setGamificationState] = useState<GamificationState>(gamificationService.getState());
+    const [affectiveState, setAffectiveState] = useState<'NEUTRAL' | 'FRUSTRATED' | 'CONFIDENT' | 'CONFUSED' | 'EXCITED'>('NEUTRAL');
+    const [confidence, setConfidence] = useState<number>(0.5);
+
+    // Developer mode state
+    const [developerMode, setDeveloperMode] = useState<boolean>(false);
+    const [showDeveloperPanel, setShowDeveloperPanel] = useState<boolean>(false);
+    // const [autoSolveAttempts, setAutoSolveAttempts] = useState<any[]>([]);
+    // const [solutionFound, setSolutionFound] = useState<boolean>(false);
+    // const [maxAttempts, setMaxAttempts] = useState<number>(5);
+
+    // Session state management
+    const [sessionId, setSessionId] = useState<string | null>(null);
+    const [sessionMode, setSessionMode] = useState<'homework' | 'exam' | null>(null);
+
+    // Gamification trigger functions
+    const awardPoints = useCallback((action: string, amount: number) => {
+        const newAchievements = gamificationService.addPoints(amount, action);
+        setGamificationState(gamificationService.getState());
+        return newAchievements;
+    }, []);
+
+    const updateAffectiveState = useCallback((aiResponse: string) => {
+        // Simple sentiment analysis based on AI response content
+        const response = aiResponse.toLowerCase();
+        let newAffectiveState: 'NEUTRAL' | 'FRUSTRATED' | 'CONFIDENT' | 'CONFUSED' | 'EXCITED' = 'NEUTRAL';
+        
+        if (response.includes('great') || response.includes('excellent') || response.includes('correct') || 
+            response.includes('well done') || response.includes('good job') || response.includes('perfect')) {
+            newAffectiveState = 'CONFIDENT';
+        } else if (response.includes('wrong') || response.includes('incorrect') || response.includes('error') ||
+                   response.includes('try again') || response.includes('not quite')) {
+            newAffectiveState = 'FRUSTRATED';
+        } else if (response.includes('confused') || response.includes('unclear') || response.includes('not sure')) {
+            newAffectiveState = 'CONFUSED';
+        } else if (response.includes('amazing') || response.includes('wow') || response.includes('incredible')) {
+            newAffectiveState = 'EXCITED';
+        }
+        
+        setAffectiveState(newAffectiveState);
+    }, []);
+
+    // const checkConceptMastery = useCallback(() => {
+    //     // Check if any concepts have high mastery (mu >= 0.9)
+    //     const masteredConcepts = Object.values(knowledgeState).filter(state => state.mu >= 0.9).length;
+    //     if (masteredConcepts > 0) {
+    //         const newAchievements = gamificationService.conceptMastered();
+    //         setGamificationState(gamificationService.getState());
+    //         return newAchievements;
+    //     }
+    //     return [];
+    // }, [knowledgeState]);
+
+    // Developer mode functions
+    const handleAutoSolve = useCallback(async (proofState: string, maxAttempts?: number) => {
+        try {
+            const result = await autoSolveProof(proofState, maxAttempts);
+            // setAutoSolveAttempts(result.attempts || []);
+            // setSolutionFound(result.solved);
+            return result;
+        } catch (error) {
+            console.error('Auto-solve failed:', error);
+            throw error;
+        }
+    }, []);
+
+    const handleToggleDeveloperMode = useCallback(async (enabled: boolean, maxAttempts?: number) => {
+        try {
+            const result = await toggleDeveloperMode(enabled, maxAttempts);
+            setDeveloperMode(result.developer_mode);
+            // if (maxAttempts) setMaxAttempts(maxAttempts);
+        } catch (error) {
+            console.error('Failed to toggle developer mode:', error);
+            throw error;
+        }
+    }, []);
+
+    const handleGetDeveloperLogs = useCallback(async () => {
+        try {
+            return await getDeveloperLogs();
+        } catch (error) {
+            console.error('Failed to get developer logs:', error);
+            throw error;
+        }
+    }, []);
+
+    // Auto-refresh developer logs when panel is open
+    // REMOVED: Unnecessary polling that was causing conflicts with DeveloperPanel's internal polling
+    // The DeveloperPanel handles its own polling when needed (during auto-solve operations)
+
+    // Session state management functions
+    const saveSessionState = useCallback(() => {
+        const sessionState = {
+            sessionId,
+            sessionMode,
+            currentClassId,
+            chatHistory,
+            knowledgeState,
+            proofCode,
+            chatMode,
+            gamificationState,
+            affectiveState,
+            confidence
+        };
+        localStorage.setItem('sessionState', JSON.stringify(sessionState));
+    }, [sessionId, sessionMode, currentClassId, chatHistory, knowledgeState, proofCode, chatMode, gamificationState, affectiveState, confidence]);
+
+    const loadSessionState = useCallback(() => {
+        const saved = localStorage.getItem('sessionState');
+        if (saved) {
+            try {
+                const sessionState = JSON.parse(saved);
+                setSessionId(sessionState.sessionId);
+                setSessionMode(sessionState.sessionMode);
+                setCurrentClassId(sessionState.currentClassId);
+                setChatHistory(sessionState.chatHistory || []);
+                setKnowledgeState(sessionState.knowledgeState || {});
+                setProofCode(sessionState.proofCode || '');
+                setChatMode(sessionState.chatMode || 'chat');
+                setGamificationState(sessionState.gamificationState || gamificationService.getState());
+                setAffectiveState(sessionState.affectiveState || 'NEUTRAL');
+                setConfidence(sessionState.confidence || 0.5);
+                return true;
+            } catch (error) {
+                console.error('Failed to load session state:', error);
+                return false;
+            }
+        }
+        return false;
+    }, []);
+
+    const clearSessionState = useCallback(() => {
+        localStorage.removeItem('sessionState');
+        setSessionId(null);
+        setSessionMode(null);
+        setChatHistory([]);
+        setProofCode('');
+        setChatMode('chat');
+        setSessionStarted(false);
+    }, []);
 
     const initializeTutoringSession = useCallback(async () => {
         if (sessionStarted) return;
@@ -57,6 +220,10 @@ const App: React.FC = () => {
         setIsAiLoading(true);
         setError(null);
         setChatHistory(prev => [...prev, { role: 'user', content: message }]);
+        
+        // Award points for chat interaction
+        const newAchievements = awardPoints('chat_interaction', 5);
+        
         try {
             console.log('Sending message to backend:', message);
             const response = await sendMessage(message);
@@ -69,6 +236,9 @@ const App: React.FC = () => {
             const aiMessage: ChatMessage = { role: 'model', content: response.aiResponse };
             console.log('Adding AI message to chat history:', aiMessage);
             setChatHistory(prev => [...prev, aiMessage]);
+            
+            // Update affective state based on AI response
+            updateAffectiveState(response.aiResponse);
             
             // Only switch to verify mode if the AI explicitly mentions proof verification
             // and we're not already in verify mode
@@ -87,13 +257,28 @@ const App: React.FC = () => {
         } finally {
             setIsAiLoading(false);
         }
-    }, [chatMode]);
+    }, [chatMode, awardPoints, updateAffectiveState]);
+
+    // Load session state on app startup
+    useEffect(() => {
+        const hasSession = loadSessionState();
+        if (hasSession && sessionId) {
+            setSessionStarted(true);
+        }
+    }, [loadSessionState]);
+
+    // Save session state when it changes
+    useEffect(() => {
+        if (sessionId) {
+            saveSessionState();
+        }
+    }, [sessionId, saveSessionState]);
 
     useEffect(() => {
-        if (nodes.length > 0 && !sessionStarted) {
+        if (nodes && nodes.length > 0 && !sessionStarted) {
             initializeTutoringSession();
         }
-    }, [nodes.length, sessionStarted, initializeTutoringSession]);
+    }, [nodes, sessionStarted, initializeTutoringSession]);
 
     const handleCreateClass = useCallback(async (className: string, syllabusFile: File | null, homeworkFile: File | null) => {
         setIsCreatingClass(true);
@@ -108,6 +293,21 @@ const App: React.FC = () => {
                 return acc;
             }, {} as KnowledgeState);
             setKnowledgeState(initialKnowledge);
+            
+            // Create class summary for dashboard
+            const classId = `class_${Date.now()}`;
+            const classData: ClassData = {
+                id: classId,
+                name: className,
+                healthScore: 0,
+                knowledgeState: initialKnowledge,
+                nodes: newNodes,
+                edges: newEdges,
+                lastSession: null,
+            };
+            updateClassSummary(classId, classData);
+            setCurrentClassId(classId);
+            
             navigate('/tutor');
         } catch (e: any) {
             setError(e.message || 'Failed to process class.');
@@ -141,13 +341,23 @@ const App: React.FC = () => {
             console.log('Finalizing exam with knowledge state:', knowledgeState);
             const result = await finalizeExam(knowledgeState);
             console.log('Exam finalized successfully:', result);
-            setFinalKnowledgeState(result.finalKnowledgeState);
+            // setFinalKnowledgeState(result.finalKnowledgeState);
+            
+            // Award points for session completion
+            // const sessionAchievements = awardPoints('session_completed', 20);
+            
+            // Save session data to backend if we have a current class
+            if (currentClassId) {
+                try {
+                    await dashboardService.updateSessionData(currentClassId, knowledgeState);
+                    console.log('Session data saved to backend');
+                } catch (error) {
+                    console.error('Failed to save session data:', error);
+                }
+            }
             
             // Clear session state
-            setSessionStarted(false);
-            setChatHistory([]);
-            setChatMode('chat');
-            setProofCode("");
+            clearSessionState();
             
             // Show success message
             setChatHistory([{ 
@@ -155,8 +365,8 @@ const App: React.FC = () => {
                 content: `Session ended successfully. Final knowledge state saved.` 
             }]);
             
-            // Optionally navigate to results page in the future
-            // navigate('/results');
+            // Navigate back to dashboard
+            handleBackToDashboard();
         } catch (e: any) {
             console.error('Error finalizing exam:', e);
             setError(e.message || 'Failed to finalize the exam session.');
@@ -190,6 +400,115 @@ const App: React.FC = () => {
             setIsAiLoading(false);
         }
     }, [proofCode]);
+
+    // Dashboard functions
+    const calculateClassHealth = useCallback((knowledgeState: KnowledgeState, nodes: GraphNode[]): number => {
+        if (!nodes || nodes.length === 0) return 0;
+        const totalMu = Object.values(knowledgeState).reduce((sum, state) => sum + state.mu, 0);
+        return Math.round((totalMu / nodes.length) * 100);
+    }, []);
+
+    const calculatePlantState = useCallback((healthScore: number): ClassSummary['plantState'] => {
+        if (healthScore >= 80) return 'flourishing';
+        if (healthScore >= 60) return 'healthy';
+        if (healthScore >= 40) return 'wilting';
+        return 'struggling';
+    }, []);
+
+    const updateClassSummary = useCallback((classId: string, classData: ClassData) => {
+        const healthScore = calculateClassHealth(classData.knowledgeState, classData.nodes);
+        const conceptsMastered = Object.values(classData.knowledgeState).filter(state => state.mu >= 0.7).length;
+        
+        const classSummary: ClassSummary = {
+            id: classId,
+            name: classData.name,
+            healthScore,
+            conceptsMastered,
+            totalConcepts: classData.nodes.length,
+            lastSession: classData.lastSession,
+            plantState: calculatePlantState(healthScore),
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        };
+
+        setClasses(prev => {
+            const existing = prev.find(c => c.id === classId);
+            if (existing) {
+                return prev.map(c => c.id === classId ? { ...classSummary, createdAt: existing.createdAt } : c);
+            }
+            return [...prev, classSummary];
+        });
+    }, [calculateClassHealth, calculatePlantState]);
+
+    const handleSelectClass = useCallback(async (classId: string) => {
+        setCurrentClassId(classId);
+        
+        try {
+            // Load class data from backend
+            const classData = await dashboardService.getClassData(classId);
+            setNodes(classData.nodes);
+            setEdges(classData.edges);
+            setKnowledgeState(classData.knowledgeState);
+            
+            // Start session
+            const response = await startSession('homework');
+            setSessionId(response.sessionId);
+            setSessionMode('homework');
+            setProofCode(response.proofCode);
+            setChatHistory([{ role: 'model', content: response.aiResponse }]);
+            setSessionStarted(true);
+            
+            navigate('/tutor');
+        } catch (error: any) {
+            console.error('handleSelectClass: Failed to start session:', error);
+            setError(error.message || 'Failed to start session');
+        }
+    }, [navigate]);
+
+    const handleCreateNewClass = useCallback(() => {
+        navigate('/setup');
+    }, [navigate]);
+
+    const handleBackToDashboard = useCallback(() => {
+        setShowDashboard(true);
+        setCurrentClassId(null);
+        navigate('/dashboard');
+    }, [navigate]);
+
+    // Load dashboard data
+    const loadDashboardData = useCallback(async () => {
+        setIsLoadingDashboard(true);
+        setDashboardError(null);
+        try {
+            const [classesData, statsData] = await Promise.all([
+                dashboardService.getClasses(),
+                dashboardService.getStats(),
+            ]);
+            setClasses(classesData);
+            setQuickStats(statsData);
+        } catch (error: any) {
+            console.error('Error loading dashboard data:', error);
+            setDashboardError(error.message || 'Failed to load dashboard data');
+        } finally {
+            setIsLoadingDashboard(false);
+        }
+    }, []);
+
+    // Quick stats state
+    const [quickStats, setQuickStats] = useState<QuickStats>({
+        totalConceptsMastered: 0,
+        currentStreak: 0,
+        flowStateTime: 0,
+        totalClasses: 0,
+        averageHealthScore: 0,
+    });
+
+    // Load dashboard data on mount
+    useEffect(() => {
+        if (showDashboard) {
+            loadDashboardData();
+        }
+    }, [showDashboard, loadDashboardData]);
 
     useEffect(() => {
         if (agentStatus) {
@@ -226,7 +545,14 @@ const App: React.FC = () => {
                         currentView={currentView}
                         setCurrentView={setCurrentView}
                         chatInput={chatInput}
-                        onChatInputChange={setChatInput}
+                        onInputChange={setChatInput}
+                        onBackToDashboard={handleBackToDashboard}
+                        affectiveState={affectiveState}
+                        confidence={confidence}
+                        gamificationState={gamificationState}
+                        onAchievementUnlocked={(achievement) => {
+                            console.log('Achievement unlocked:', achievement);
+                        }}
                     />
                 );
             case 'graph':
@@ -298,7 +624,7 @@ const App: React.FC = () => {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="bg-slate-700 p-4 rounded-lg">
                                         <h3 className="text-lg font-medium text-slate-200 mb-2">Concepts Covered</h3>
-                                        <p className="text-3xl font-bold text-blue-400">{nodes.length}</p>
+                                        <p className="text-3xl font-bold text-blue-400">{nodes ? nodes.length : 0}</p>
                                         <p className="text-sm text-slate-400">Total concepts in session</p>
                                     </div>
                                     <div className="bg-slate-700 p-4 rounded-lg">
@@ -309,7 +635,7 @@ const App: React.FC = () => {
                                     <div className="bg-slate-700 p-4 rounded-lg">
                                         <h3 className="text-lg font-medium text-slate-200 mb-2">Average Mastery</h3>
                                         <p className="text-3xl font-bold text-yellow-400">
-                                            {nodes.length > 0 
+                                            {nodes && nodes.length > 0 
                                                 ? Math.round((Object.values(knowledgeState).reduce((sum, state) => sum + state.mu, 0) / nodes.length) * 100)
                                                 : 0}%
                                         </p>
@@ -381,7 +707,14 @@ const App: React.FC = () => {
                         currentView={currentView}
                         setCurrentView={setCurrentView}
                         chatInput={chatInput}
-                        onChatInputChange={setChatInput}
+                        onInputChange={setChatInput}
+                        onBackToDashboard={handleBackToDashboard}
+                        affectiveState={affectiveState}
+                        confidence={confidence}
+                        gamificationState={gamificationState}
+                        onAchievementUnlocked={(achievement) => {
+                            console.log('Achievement unlocked:', achievement);
+                        }}
                     />
                 );
         }
@@ -389,13 +722,49 @@ const App: React.FC = () => {
 
     return (
         <div className="h-full flex flex-col p-4 sm:p-6 lg:p-8 gap-8 bg-gray-900 text-slate-200">
-            <header className="text-center shrink-0">
+            <header className="text-center shrink-0 relative">
                 <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-blue-400">Altera Labs Cognitive Partner</h1>
+                {/* Removed Confidence Level modal */}
+                <div className="absolute top-0 right-0 mt-2 mr-2 z-50">
+                  <ViewModeSwitcher 
+                    viewMode={developerMode ? 'developer' : 'graph'} 
+                    setViewMode={mode => {
+                      setDeveloperMode(mode === 'developer');
+                      setShowDeveloperPanel(mode === 'developer');
+                    }}
+                  />
+                </div>
             </header>
             <main className="flex-grow overflow-hidden">
                 <Routes>
                     <Route 
                         path="/" 
+                        element={
+                            <DashboardPage
+                                classes={classes}
+                                stats={quickStats}
+                                onCreateClass={handleCreateNewClass}
+                                onSelectClass={handleSelectClass}
+                                isLoading={isLoadingDashboard}
+                                error={dashboardError}
+                            />
+                        } 
+                    />
+                    <Route 
+                        path="/dashboard" 
+                        element={
+                            <DashboardPage
+                                classes={classes}
+                                stats={quickStats}
+                                onCreateClass={handleCreateNewClass}
+                                onSelectClass={handleSelectClass}
+                                isLoading={isLoadingDashboard}
+                                error={dashboardError}
+                            />
+                        } 
+                    />
+                    <Route 
+                        path="/setup" 
                         element={
                             <SetupPage 
                                 className={className}
@@ -412,6 +781,18 @@ const App: React.FC = () => {
                     />
                 </Routes>
             </main>
+
+            {/* Developer Panel */}
+            {showDeveloperPanel && (
+                <DeveloperPanel
+                    isVisible={showDeveloperPanel}
+                    onClose={() => setShowDeveloperPanel(false)}
+                    currentProofState={proofCode}
+                    onAutoSolve={handleAutoSolve}
+                    onToggleDeveloperMode={handleToggleDeveloperMode}
+                    onGetLogs={handleGetDeveloperLogs}
+                />
+            )}
         </div>
     );
 };

@@ -54,3 +54,6 @@ yarn-error.log*
 
 # Optional: Ignore specific test files if you don't want them in the repo.
 # /backend/lean_verifier/Test.lean
+
+# Python virtual environments
+.venv/

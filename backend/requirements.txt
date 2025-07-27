@@ -9,4 +9,4 @@ PyMuPDF
 pexpect
 tqdm
 requests_toolbelt
-google-cloud-aiplatform
+google-cloud-aiplatform>=1.40.0

@@ -38,7 +38,23 @@ npm install
 echo "--- Returning to workspace root ---"
 cd "$WORKSPACE_ROOT"
 
-echo "--- Setting up backend Python dependencies ---"
+# --- Always recreate venv inside the container ---
+rm -rf .venv
+python3 -m venv .venv
+. .venv/bin/activate
+pip install --upgrade pip
 pip install -r backend/requirements.txt
+# Ensure .venv/bin/python3 exists for compatibility
+if [ ! -f ".venv/bin/python3" ]; then
+  ln -s python .venv/bin/python3
+fi
+
+# --- Auto-activate venv in every new terminal ---
+VENV_ACTIVATE=". /workspaces/Altera-Labs/.venv/bin/activate"
+for PROFILE in /home/vscode/.bashrc /home/vscode/.zshrc /home/vscode/.profile; do
+  if ! grep -Fxq "$VENV_ACTIVATE" "$PROFILE" 2>/dev/null; then
+    echo "$VENV_ACTIVATE" >> "$PROFILE"
+  fi
+done
 
 echo "--- ✅✅✅ Dev Container setup complete! ✅✅✅ ---"
