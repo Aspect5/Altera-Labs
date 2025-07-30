@@ -146,4 +146,5 @@ Our goal is to evolve beyond the MVP by building out our "Four Vectors" of pedag
 * **Affective Computing**: Integrate emotion detection to respond to student frustration with increased support.
 * **Dynamic Knowledge Modeling**: Build a persistent, personalized Knowledge Graph for each student.
 * **Immersive Pedagogy**: Replace static text responses with interactive visualizations and "Explorable Explanations."
+* **Verifiability**: Advanced multi-agent architecture allows AI and student proofs to be objectively verified using a Lean 4 proof assistant.
 
