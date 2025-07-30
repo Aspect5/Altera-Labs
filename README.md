@@ -1,6 +1,8 @@
 # Altera Labs - The AI Cognitive Partner
 
-Altera Labs is a student-led venture from Johns Hopkins University dedicated to building a pedagogically superior AI tutor for STEM education. Our mission is to create an **AI Cognitive Partner** that enhances a student's critical thinking skills, rather than just providing answers.
+**Altera Labs** is a student-led venture from Johns Hopkins University dedicated to helping people in meaningful ways through technology. Whether taking on larger and more complex challenges in future projects or iterating and improving on existing ones, we will strive to continue upholding this principles in all that we do.
+
+In this project, we are dedicated to building a pedagogically superior AI tutor for STEM education. Our mission is to create an **AI Cognitive Partner** that enhances a student's critical thinking skills, rather than just providing answers.
 
 This project contains the full-stack application for our "Proof State Auditor" MVP, a specialized AI tutor designed to guide students through formal mathematical proofs using the Lean 4 proof assistant.
 
