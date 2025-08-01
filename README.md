@@ -306,9 +306,8 @@ Diagram 1: Planned Hierarchical Knowledge Architecture
 
 Code snippet
 
-
+```mermaid
 graph TD
-```
     subgraph User Interaction Layer
         UI(React Frontend)
     end
@@ -363,9 +362,8 @@ Diagram 2: Current Implemented Architecture
 
 Code snippet
 
-
+```mermaid
 graph TD
-```
     subgraph User Interaction Layer
         UI(React Frontend)
     end
