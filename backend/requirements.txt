@@ -10,3 +10,10 @@ pexpect
 tqdm
 requests_toolbelt
 google-cloud-aiplatform>=1.40.0
+
+# New dependencies for Phase 1 optimization
+torch>=2.0.0
+transformers>=4.30.0
+accelerate>=0.20.0
+sentencepiece>=0.1.99
+protobuf>=3.20.0

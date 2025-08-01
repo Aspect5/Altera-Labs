@@ -4,6 +4,9 @@ An intelligent tutoring system that combines Lean 4 theorem proving with AI to p
 
 ## 🎯 Quick Start
 
+# MODEL:
+http://xgrg.github.io/Inserting-BibTeX-references-in-Google-Docs
+
 ### **For Collaborators (Recommended)**
 1. **Clone the repository**
    ```bash
@@ -291,3 +294,101 @@ Happy coding! 🚀
 
 For more details, see the devcontainer and VS Code documentation.
 
+Graphs:
+
+
+2.4. System Architecture Diagrams
+
+The following diagrams visually represent the significant gap between the planned architecture and the current implementation.
+
+Diagram 1: Planned Hierarchical Knowledge Architecture
+
+
+Code snippet
+
+
+graph TD
+```
+    subgraph User Interaction Layer
+        UI(React Frontend)
+    end
+
+    subgraph API & Orchestration Layer
+        FLASK(Flask Backend API)
+    end
+
+    subgraph AI & Reasoning Layer
+        GEMINI(Gemini 2.5 Pro API <br> Socratic Dialogue, Summarization, NLP)
+        PROVER_AGENT(Specialized Prover Agent <br> e.g., DeepSeek-Prover-V2)
+    end
+
+    subgraph Knowledge & Persistence Layer
+        NEO4J(Neo4j Graph Database)
+    end
+
+    subgraph Data Processing Layer
+        PARSER(Syllabus Parser <br> GCN/DBN Student Modeler)
+        RAG_PIPELINE(Offline GraphRAG Pipeline <br> Embeddings, Community Detection)
+    end
+
+    UI -- API Calls --> FLASK
+    FLASK -- Socratic Prompts --> GEMINI
+    FLASK -- Graph Queries --> NEO4J
+    FLASK -- Interaction Data --> PARSER
+    GEMINI -- Parsed Data --> FLASK
+    PARSER -- Updates PKG/DBN --> NEO4J
+
+    subgraph NEO4J
+        PKG1(PKG - Student 1)
+        PKG2(PKG - Student 2)
+        GLOBAL_GRAPH(Global Mathlib Graph <br> Community Partitioned)
+    end
+
+    PKG1 -- Hierarchical Query --> GLOBAL_GRAPH
+    PKG2 -- Hierarchical Query --> GLOBAL_GRAPH
+
+    RAG_PIPELINE -- Builds/Updates --> GLOBAL_GRAPH
+    FLASK -- Calls Prover as Tool --> PROVER_AGENT
+    PROVER_AGENT -- Formal Proof Goal --> PROVER_AGENT
+    PROVER_AGENT -- Lean 4 Tactic --> FLASK
+
+    style GLOBAL_GRAPH fill:#d5f5e3,stroke:#27ae60
+    style PKG1 fill:#eaf2f8,stroke:#3498db
+    style PKG2 fill:#eaf2f8,stroke:#3498db
+```
+
+
+Diagram 2: Current Implemented Architecture
+
+
+Code snippet
+
+
+graph TD
+```
+    subgraph User Interaction Layer
+        UI(React Frontend)
+    end
+
+    subgraph Backend Layer
+        FLASK(Flask Backend - app.py)
+    end
+
+    subgraph AI & Verification Layer
+        GEMINI_API(Gemini API Call <br> socratic_auditor.py)
+        LEAN(Lean 4 Verifier <br> Subprocess Call)
+    end
+
+    subgraph Static Knowledge & Storage
+        KNOWLEDGE_DICT(Static Knowledge Base <br> lean_knowledge_base.py)
+        JSON_DB(classes.json <br> Flat-File Persistence)
+    end
+
+    UI -- API Calls --> FLASK
+    FLASK -- Reads/Writes --> JSON_DB
+    FLASK -- General Prompts --> GEMINI_API
+    FLASK -- Looks up theorems --> KNOWLEDGE_DICT
+    GEMINI_API -- Text/JSON --> FLASK
+    FLASK -- Sends Tactic for Verification --> LEAN
+    LEAN -- Success/Error --> FLASK
+```
