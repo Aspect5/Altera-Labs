@@ -32,7 +32,8 @@
 
   "forwardPorts": [5173, 5000],
   "mounts": [
-    "source=${localEnv:HOME}/.config/gcloud,target=/home/vscode/.config/gcloud,type=bind,consistency=cached"
+    "source=${localEnv:HOME}/.config/gcloud,target=/home/vscode/.config/gcloud,type=bind,consistency=cached,ro",
+    "source=${localEnv:APPDATA}/gcloud,target=/home/vscode/.config/gcloud,type=bind,consistency=cached,ro"
   ],
 
   "remoteUser": "vscode"

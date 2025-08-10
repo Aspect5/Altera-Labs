@@ -2,6 +2,13 @@
 
 An intelligent tutoring system combining Lean 4 theorem proving with AI to provide personalized math education.
 
+## Prerequisites (host)
+- Docker Desktop: [Install](https://docs.docker.com/desktop/)
+- VS Code or Cursor: [VS Code](https://code.visualstudio.com/) | [Cursor](https://www.cursor.com/)
+- Dev Containers (VS Code): [Extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
+- Google Cloud SDK (gcloud CLI): [Install](https://cloud.google.com/sdk/docs/install)
+- Optional (only if running outside the container): Node.js/npm [Install](https://nodejs.org/en/download/package-manager)
+
 ## 🎯 Quick Start
 
 1) Clone
@@ -15,6 +22,7 @@ cd Altera-Labs
 - First build takes ~5–10 minutes
 
 3) Authenticate Google Cloud (one-time on your host)
+- If you do not have gcloud yet: [Install the Google Cloud SDK](https://cloud.google.com/sdk/docs/install)
 ```bash
 gcloud auth application-default login
 ```
@@ -115,7 +123,6 @@ Common tasks are consolidated in `./scripts/manage.sh`:
 # Development
 ./scripts/manage.sh development start
 ./scripts/manage.sh development build
-# (development test runs backend pytest; frontend tests are not configured)
 
 # Maintenance
 ./scripts/manage.sh maintenance cleanup
