@@ -48,7 +48,7 @@ app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-secret-key-replace-in-prod")
 CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
 
 # --- PERSISTENT CLASS STORAGE ---
-CLASSES_FILE = Path("/workspaces/Altera-Labs/data/classes.json")
+CLASSES_FILE = Path.cwd() / "data" / "classes.json"
 CLASSES_FILE.parent.mkdir(exist_ok=True)
 
 def load_classes() -> Dict[str, Dict[str, Any]]:

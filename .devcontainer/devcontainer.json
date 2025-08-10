@@ -13,7 +13,6 @@
     }
   },
 
-  // --- FINAL FIX: Use the exact variable names the Python script expects ---
   "containerEnv": {
     "VERTEX_AI_PROJECT_ID": "altera-labs",
     "VERTEX_AI_LOCATION": "us-east1"
@@ -24,21 +23,18 @@
   "customizations": {
     "vscode": {
       "extensions": [
-        "leanprover.lean4"
+        "leanprover.lean4",
+        "ms-python.python",
+        "ms-python.vscode-pylance"
       ]
     }
   },
 
-  "settings": {
-    "python.defaultInterpreterPath": "/workspaces/Altera-Labs/.venv/bin/python"
-  },
-
   "forwardPorts": [5173, 5000],
   "mounts": [
-      // Mounts the gcloud config directory from your local machine to the container
-      // This lets your app use your local user's credentials for Google Cloud
-      "source=${localEnv:HOME}${localEnv:USERPROFILE}/.config/gcloud,target=/home/vscode/.config/gcloud,type=bind,consistency=cached"
-    ],
+    "source=${localEnv:HOME}/.config/gcloud,target=/home/vscode/.config/gcloud,type=bind,consistency=cached,ro",
+    "source=${localEnv:APPDATA}/gcloud,target=/home/vscode/.config/gcloud,type=bind,consistency=cached,ro"
+  ],
 
   "remoteUser": "vscode"
 }

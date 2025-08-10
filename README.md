@@ -1,220 +1,126 @@
 # 🚀 Altera Labs - AI-Powered Math Education Platform
 
-An intelligent tutoring system that combines Lean 4 theorem proving with AI to provide personalized math education.
+An intelligent tutoring system combining Lean 4 theorem proving with AI to provide personalized math education.
+
+## Prerequisites (host)
+- Docker Desktop: [Install](https://docs.docker.com/desktop/)
+- VS Code or Cursor: [VS Code](https://code.visualstudio.com/) | [Cursor](https://www.cursor.com/)
+- Dev Containers (VS Code): [Extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
+- Google Cloud SDK (gcloud CLI): [Install](https://cloud.google.com/sdk/docs/install)
+- Optional (only if running outside the container): Node.js/npm [Install](https://nodejs.org/en/download/package-manager)
 
 ## 🎯 Quick Start
 
-# MODEL:
-http://xgrg.github.io/Inserting-BibTeX-references-in-Google-Docs
+1) Clone
+```bash
+git clone <repository-url>
+cd Altera-Labs
+```
 
-### **For Collaborators (Recommended)**
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd Altera-Labs
-   ```
+2) Open in Dev Container (recommended)
+- Open in VS Code or Cursor and choose “Reopen in Container”
+- First build takes ~5–10 minutes
 
-2. **Install Node build tooling at the repo root (required for CSS/Tailwind)**
-   Tailwind/PostCSS live in the repo root. Run this once per machine to ensure styles compile correctly.
-   ```bash
-   npm install
-   ```
+3) Authenticate Google Cloud (one-time on your host)
+- If you do not have gcloud yet: [Install the Google Cloud SDK](https://cloud.google.com/sdk/docs/install)
+```bash
+gcloud auth application-default login
+```
+This provides credentials to the container via the mounted `~/.config/gcloud` directory.
 
-3. **Open in Dev Container (best experience)**
-   - Open in VS Code or Cursor
-   - Click **"Reopen in Container"** when prompted
-   - Wait 5-10 minutes for automatic setup
+4) Start development
+```bash
+# Use the management script (recommended)
+./scripts/manage.sh development start
 
-4. **Start Development**
-   ```bash
-   # Use the management script for easy development
-   ./scripts/manage.sh development start
-   
-   # Or manually:
-   # Backend (Flask API)
-   cd backend && python -m app
-   
-   # Frontend (React + Vite)
-   cd frontend && npm install && npm run dev
-   ```
+# Or manual:
+# Backend (Flask API)
+cd backend && python -m app
 
-## 🔧 What's Included
+# Frontend (React + Vite)
+# First time only, from repo root:
+npm install
+cd frontend && npm install && npm run dev
+```
 
-### **Core Technologies**
-- ✅ **Python 3.10** - Backend API with Flask
-- ✅ **Node.js 20** - Frontend with React + TypeScript
-- ✅ **Lean 4** - Theorem proving with Mathlib
-- ✅ **Google Cloud** - Vertex AI integration
-- ✅ **Git** - Version control
-
-### **VS Code Extensions**
-- ✅ **Lean4** - Lean theorem prover support
-- ✅ **Python** - Python development tools
-- ✅ **Pylance** - Python language server
-- ✅ **TypeScript** - Frontend development
-
-### **Automatic Setup**
-The dev container automatically installs:
-- All Python dependencies from `backend/requirements.txt`
-- All Node.js dependencies from `frontend/package.json`
-- Tailwind/PostCSS toolchain from the repo root `package.json`
-- Lean 4 with Mathlib for theorem proving
-- Google Cloud SDK for AI services
+## 🔧 What the Dev Container Sets Up Automatically
+- Python 3.10, Node.js 20, Git (via features)
+- A project-local virtualenv at `.venv` with `backend/requirements.txt` installed
+- Root toolchain for Tailwind/PostCSS via `npm install` at repo root
+- Frontend dependencies via `frontend/package.json`
+- Lean 4 via `elan` and a `lake build` of `backend/lean_verifier`
+- Environment variables for Vertex AI usage inside the container:
+  - `VERTEX_AI_PROJECT_ID=altera-labs`
+  - `VERTEX_AI_LOCATION=us-east1`
+- If present on your host, your Google Cloud credentials directory is mounted into the container. Note: the `gcloud` CLI is not installed in the container.
 
 ## 🏗️ Project Structure
-
 ```
 Altera-Labs/
-├── backend/                 # Python Flask API
-│   ├── app.py              # Main application
-│   ├── lean_verifier/      # Lean 4 theorem prover
-│   └── requirements.txt    # Python dependencies
-├── frontend/               # React + TypeScript
-│   ├── src/               # Source code
-│   ├── package.json       # Node.js dependencies
-│   └── vite.config.ts     # Build configuration
-├── .devcontainer/         # Dev container configuration
-│   ├── devcontainer.json  # Container setup
-│   └── post-create.sh     # Post-creation script
-├── docs/                  # Documentation
-└── COLLABORATOR_SETUP.md  # Detailed setup guide
+├── backend/                 # Python Flask API and Lean integration
+│   ├── app.py               # Main application
+│   ├── requirements.txt     # Python dependencies
+│   ├── lean_verifier/       # Lean 4 project (lake)
+│   └── tests/               # Pytest-based tests
+├── frontend/                # React + TypeScript (Vite)
+│   ├── package.json
+│   └── ARCHITECTURE.md
+├── scripts/                 # Helper scripts
+│   └── manage.sh            # Unified management script
+├── .devcontainer/           # Dev container configuration
+│   ├── devcontainer.json
+│   └── post-create.sh
+├── docs/                    # Additional documentation
+└── package.json             # Root toolchain (Tailwind/PostCSS)
 ```
 
 ## 🚀 Running the Application
 
-### **Backend (Flask API)**
+- Backend (Flask API)
 ```bash
 cd backend
 python -m app
+# API served at http://localhost:5000
 ```
-The API will be available at `http://localhost:5000`
 
-### **Frontend (React + Vite)**
+- Frontend (React + Vite)
 ```bash
-# First time on a new machine:
-# 1) install root toolchain for Tailwind/PostCSS
+# First time on a new machine (from repo root)
 npm install
-# 2) then start the frontend
+
 cd frontend
 npm install
 npm run dev
+# App served at http://localhost:5173
 ```
-The frontend will be available at `http://localhost:5173`
 
-### **Lean Development**
+- Lean Development
 ```bash
 cd backend/lean_verifier
 lake build
 ```
 
-## 🔍 Troubleshooting
-
-### **Unstyled page or CSS not loading**
-If the site looks unstyled (plain HTML), ensure Tailwind/PostCSS are installed from the repo root:
+## 🧪 Testing
+- Backend: pytest in `backend/tests/`
 ```bash
-# From the repository root
-npm install
-
-# From the frontend folder
-cd frontend
-npm install
-npm run dev
+cd backend
+pytest
 ```
-Verify the toolchain is available to the frontend:
+- Frontend: a test suite is not configured yet
+- Lean: build via `lake build`
+
+## 🛠️ Management Script
+Common tasks are consolidated in `./scripts/manage.sh`:
 ```bash
-# From frontend/
-npm ls tailwindcss postcss autoprefixer || true
-```
-If any are missing, run:
-```bash
-# From frontend/
-npm install -D tailwindcss postcss autoprefixer
-```
-Then restart `npm run dev`.
-
-### **Container Won't Start**
-If the container gets stuck during build:
-
-1. **Clear Cursor/VS Code cache:**
-   ```bash
-   rm -rf ~/.cursor-server
-   rm -rf ~/.cursor ~/.cursor-server ~/.vscode-remote-containers
-   ```
-
-2. **Restart Docker Desktop**
-
-3. **Try again** - "Reopen in Container"
-
-### **Dependencies Missing**
-If something isn't working:
-
-```bash
-# Re-run the setup script
-bash .devcontainer/post-create.sh
-```
-
-### **Google Cloud Issues**
-If you need to authenticate with Google Cloud:
-
-```bash
-# For development (recommended)
-gcloud auth application-default login
-
-# Or for user authentication
-gcloud auth login
-
-# Set the correct project
-gcloud config set project altera-labs
-```
-
-### **Lean Issues**
-If Lean isn't working:
-
-```bash
-cd backend/lean_verifier
-lake update mathlib
-lake build
-```
-
-## 🛠️ Development Workflow
-
-### **Making Changes**
-1. All changes are made inside the dev container
-2. Code is automatically synced with your host machine
-3. Use Git for version control as usual
-
-### **Adding Dependencies**
-- **Python**: Add to `backend/requirements.txt`
-- **Node.js**: Add to `frontend/package.json`
-- **Lean**: Add to `backend/lean_verifier/lakefile.toml`
-
-### **Testing**
-- **Backend**: `cd backend && python -m pytest`
-- **Frontend**: `cd frontend && npm test`
-- **Lean**: `cd backend/lean_verifier && lake test`
-
-## 🔐 Security Notes
-
-- Google Cloud credentials are mounted as read-only
-- All dependencies are installed inside the container
-- No sensitive data is stored in the repository
-
-## 🛠️ Management Tools
-
-### **Unified Management Script**
-All development tasks are now consolidated into a single script:
-
-```bash
-# Container management
+# Container
 ./scripts/manage.sh container rebuild
 ./scripts/manage.sh container diagnose
 
-# Dependency management
+# Dependencies
 ./scripts/manage.sh dependencies verify
 ./scripts/manage.sh dependencies install
 
-# Development tasks
-./scripts/manage.sh development test
+# Development
 ./scripts/manage.sh development start
 ./scripts/manage.sh development build
 
@@ -223,129 +129,37 @@ All development tasks are now consolidated into a single script:
 ./scripts/manage.sh maintenance backup
 ```
 
-### **Consolidated Test Suite**
-All testing is now unified in `backend/test_suite.py`:
-- Unit tests for all components
-- Performance benchmarking
-- Integration testing
-- Configuration validation
+## 📚 Documentation and Models
+- Frontend Architecture: `frontend/ARCHITECTURE.md`
+- Technical Specification: `TECHNICAL_SPEC.md`
 
-### **Comprehensive Setup Guide**
-All setup documentation is consolidated in `docs/SETUP.md`:
-- Quick start for collaborators
-- Manual setup instructions
-- Troubleshooting guide
-- Development workflow
+### Models
+- Primary LLM: Gemini 2.5 Pro (Vertex AI)
+- Prover Agent: optional specialized prover (e.g., DeepSeek‑Prover‑V2) called as a tool
+- Lean 4 + Mathlib for formal verification
 
-## 📚 Documentation
-
-- **[Complete Setup Guide](docs/SETUP.md)** - All setup scenarios
-- **[System Architecture](frontend/ARCHITECTURE.md)** - Frontend architecture
-- **[Technical Specification](TECHNICAL_SPEC.md)** - System design
+## 🔐 Security Notes
+- Google Cloud credentials (if present on host) are mounted read-only into the container
+- No sensitive data is committed to the repository
 
 ## 🤝 Contributing
-
 1. Fork the repository
 2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+3. Make changes with tests where applicable
+4. Open a pull request
 
 ## 📞 Getting Help
-
-If you encounter issues:
-
-1. **Check the logs** in the terminal
-2. **Run the setup script** manually: `bash .devcontainer/post-create.sh`
-3. **Ask the team** - we're here to help!
-
-## 🎉 You're Ready!
-
-The dev container ensures everyone has the same development environment. No more "works on my machine" issues!
-
-Happy coding! 🚀
-
-# Altera Labs - Development Environment Setup
-
-## Best Practices for Running Backend and Frontend
-
-### 1. **Devcontainer (Recommended for Consistency)**
-
-- Open the project in VS Code or Cursor.
-- Use "Reopen in Container" (VS Code) or the equivalent in Cursor.
-- The devcontainer will automatically:
-  - Create a Linux-native `.venv` in the project root
-  - Install all Python dependencies in the venv
-  - Set up Node and Lean dependencies
-  - Auto-activate the venv in every new terminal
-- **To run the backend:**
-  ```sh
-  cd backend
-  python -m app
-  ```
-- **To run the frontend:**
-  ```sh
-  # Ensure root dependencies are installed once
-  npm install
-  cd frontend
-  npm install
-  npm run dev
-  ```
-
-### 2. **Running on Your Host (macOS/Linux/Windows)**
-
-- **Do NOT use the container's `.venv` on your host.**
-- Create a separate venv for your host:
-  ```sh
-  python3 -m venv .venv-mac  # or .venv-win, etc.
-  source .venv-mac/bin/activate
-  pip install --upgrade pip
-  pip install -r backend/requirements.txt
-  ```
-- **To run the backend:**
-  ```sh
-  cd backend
-  python -m app
-  ```
-- **To run the frontend:**
-  ```sh
-  # First install root toolchain for Tailwind/PostCSS
-  npm install
-  # Then install and start the frontend
-  cd frontend
-  npm install
-  npm run dev
-  ```
-
-### 3. **Python Import Structure**
-- All imports of `developer_config` should use:
-  ```python
-  from config.developer_config import developer_config, developer_logger
-  ```
-- The `config/` directory must contain an `__init__.py` file (already present).
-
-### 4. **.venv is in .gitignore**
-- Never commit `.venv` to the repo. Each environment (host or container) should create its own venv.
-
-### 5. **VS Code/Cursor Interpreter**
-- The devcontainer sets the interpreter to `.venv/bin/python` only inside the container.
-- On your host, select your host-native venv interpreter manually if needed.
+- Check terminal logs
+- Re-run `.devcontainer/post-create.sh` inside the container
+- Ask the team
 
 ---
 
-For more details, see the devcontainer and VS Code documentation.
+## 2.4. System Architecture Diagrams
 
-Graphs:
-
-
-2.4. System Architecture Diagrams
-
-The following diagrams visually represent the significant gap between the planned architecture and the current implementation.
+The following diagrams visualize the planned architecture and the current implementation. These, along with our model choices, are central to the system design.
 
 Diagram 1: Planned Hierarchical Knowledge Architecture
-
-
-Code snippet
 
 ```mermaid
 graph TD
@@ -397,11 +211,7 @@ graph TD
     style PKG2 fill:#eaf2f8,stroke:#3498db
 ```
 
-
 Diagram 2: Current Implemented Architecture
-
-
-Code snippet
 
 ```mermaid
 graph TD
