@@ -14,7 +14,13 @@ cd Altera-Labs
 - Open in VS Code or Cursor and choose “Reopen in Container”
 - First build takes ~5–10 minutes
 
-3) Start development
+3) Authenticate Google Cloud (one-time on your host)
+```bash
+gcloud auth application-default login
+```
+This provides credentials to the container via the mounted `~/.config/gcloud` directory.
+
+4) Start development
 ```bash
 # Use the management script (recommended)
 ./scripts/manage.sh development start
@@ -116,27 +122,11 @@ Common tasks are consolidated in `./scripts/manage.sh`:
 ./scripts/manage.sh maintenance backup
 ```
 
-## 🔍 Troubleshooting
-- Unstyled page or CSS missing
-```bash
-# From repo root
-npm install
-cd frontend && npm install && npm run dev
-```
-
-- Container issues
-  - Use “Reopen in Container” in your IDE
-  - Or run: `./scripts/manage.sh container diagnose`
-
-- Dependencies missing in container
-```bash
-bash .devcontainer/post-create.sh
-```
-
-## 📚 Documentation
+## 📚 Documentation and Models
 - Complete Setup Guide: `docs/SETUP.md`
 - Frontend Architecture: `frontend/ARCHITECTURE.md`
 - Technical Specification: `TECHNICAL_SPEC.md`
+- Quick Start with Vertex AI Auth: `docs/QUICKSTART.md`
 
 ## 🔐 Security Notes
 - Google Cloud credentials (if present on host) are mounted read-only into the container
@@ -157,7 +147,7 @@ bash .devcontainer/post-create.sh
 
 ## 2.4. System Architecture Diagrams
 
-The following diagrams visualize the planned architecture and the current implementation.
+The following diagrams visualize the planned architecture and the current implementation. These, along with our model choices, are central to the system design.
 
 Diagram 1: Planned Hierarchical Knowledge Architecture
 
