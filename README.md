@@ -14,12 +14,18 @@ http://xgrg.github.io/Inserting-BibTeX-references-in-Google-Docs
    cd Altera-Labs
    ```
 
-2. **Open in Dev Container**
+2. **Install Node build tooling at the repo root (required for CSS/Tailwind)**
+   Tailwind/PostCSS live in the repo root. Run this once per machine to ensure styles compile correctly.
+   ```bash
+   npm install
+   ```
+
+3. **Open in Dev Container (best experience)**
    - Open in VS Code or Cursor
    - Click **"Reopen in Container"** when prompted
    - Wait 5-10 minutes for automatic setup
 
-3. **Start Development**
+4. **Start Development**
    ```bash
    # Use the management script for easy development
    ./scripts/manage.sh development start
@@ -29,7 +35,7 @@ http://xgrg.github.io/Inserting-BibTeX-references-in-Google-Docs
    cd backend && python -m app
    
    # Frontend (React + Vite)
-   cd frontend && npm run dev
+   cd frontend && npm install && npm run dev
    ```
 
 ## 🔧 What's Included
@@ -51,6 +57,7 @@ http://xgrg.github.io/Inserting-BibTeX-references-in-Google-Docs
 The dev container automatically installs:
 - All Python dependencies from `backend/requirements.txt`
 - All Node.js dependencies from `frontend/package.json`
+- Tailwind/PostCSS toolchain from the repo root `package.json`
 - Lean 4 with Mathlib for theorem proving
 - Google Cloud SDK for AI services
 
@@ -84,7 +91,12 @@ The API will be available at `http://localhost:5000`
 
 ### **Frontend (React + Vite)**
 ```bash
+# First time on a new machine:
+# 1) install root toolchain for Tailwind/PostCSS
+npm install
+# 2) then start the frontend
 cd frontend
+npm install
 npm run dev
 ```
 The frontend will be available at `http://localhost:5173`
@@ -96,6 +108,29 @@ lake build
 ```
 
 ## 🔍 Troubleshooting
+
+### **Unstyled page or CSS not loading**
+If the site looks unstyled (plain HTML), ensure Tailwind/PostCSS are installed from the repo root:
+```bash
+# From the repository root
+npm install
+
+# From the frontend folder
+cd frontend
+npm install
+npm run dev
+```
+Verify the toolchain is available to the frontend:
+```bash
+# From frontend/
+npm ls tailwindcss postcss autoprefixer || true
+```
+If any are missing, run:
+```bash
+# From frontend/
+npm install -D tailwindcss postcss autoprefixer
+```
+Then restart `npm run dev`.
 
 ### **Container Won't Start**
 If the container gets stuck during build:
@@ -250,7 +285,10 @@ Happy coding! 🚀
   ```
 - **To run the frontend:**
   ```sh
+  # Ensure root dependencies are installed once
+  npm install
   cd frontend
+  npm install
   npm run dev
   ```
 
@@ -271,6 +309,9 @@ Happy coding! 🚀
   ```
 - **To run the frontend:**
   ```sh
+  # First install root toolchain for Tailwind/PostCSS
+  npm install
+  # Then install and start the frontend
   cd frontend
   npm install
   npm run dev
