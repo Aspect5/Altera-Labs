@@ -99,7 +99,7 @@ cd backend
 pytest
 ```
 - Frontend: a test suite is not configured yet
-- Lean: build via `lake build` (tests optional if you add them)
+- Lean: build via `lake build`
 
 ## 🛠️ Management Script
 Common tasks are consolidated in `./scripts/manage.sh`:
@@ -123,10 +123,13 @@ Common tasks are consolidated in `./scripts/manage.sh`:
 ```
 
 ## 📚 Documentation and Models
-- Complete Setup Guide: `docs/SETUP.md`
 - Frontend Architecture: `frontend/ARCHITECTURE.md`
 - Technical Specification: `TECHNICAL_SPEC.md`
-- Quick Start with Vertex AI Auth: `docs/QUICKSTART.md`
+
+### Models
+- Primary LLM: Gemini 2.5 Pro (Vertex AI)
+- Prover Agent: optional specialized prover (e.g., DeepSeek‑Prover‑V2) called as a tool
+- Lean 4 + Mathlib for formal verification
 
 ## 🔐 Security Notes
 - Google Cloud credentials (if present on host) are mounted read-only into the container
