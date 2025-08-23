@@ -1,6 +1,5 @@
 # Python dependencies for the Altera Labs backend.
-# Use 'pip install -r requirements.txt' to install.
-
+# Core dependencies - installed first for faster container builds
 flask
 flask-cors
 python-dotenv
@@ -10,10 +9,11 @@ pexpect
 tqdm
 requests_toolbelt
 google-cloud-aiplatform>=1.40.0
-
-# New dependencies for Phase 1 optimization
-torch>=2.0.0
-transformers>=4.30.0
-accelerate>=0.20.0
-sentencepiece>=0.1.99
 protobuf>=3.20.0
+
+# Heavy ML dependencies - install separately if needed
+# Uncomment these lines if you need ML capabilities:
+# torch>=2.0.0
+# transformers>=4.30.0
+# accelerate>=0.20.0
+# sentencepiece>=0.1.99

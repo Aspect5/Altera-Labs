@@ -21,12 +21,54 @@ cd Altera-Labs
 - Open in VS Code or Cursor and choose “Reopen in Container”
 - First build takes ~5–10 minutes
 
-3) Authenticate Google Cloud (one-time on your host)
-- If you do not have gcloud yet: [Install the Google Cloud SDK](https://cloud.google.com/sdk/docs/install)
+3) Install and Authenticate Google Cloud (one-time setup on your host)
+
+### 📥 Install Google Cloud CLI:
+
+**🍎 macOS:**
 ```bash
+# Option 1: Homebrew (recommended)
+brew install google-cloud-sdk
+
+# Option 2: Direct download
+curl -O https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-darwin-arm.tar.gz
+tar -xf google-cloud-cli-darwin-arm.tar.gz
+./google-cloud-sdk/install.sh
+```
+
+**🪟 Windows:**
+```powershell
+# Download and run installer
+(New-Object Net.WebClient).DownloadFile("https://dl.google.com/dl/cloudsdk/channels/rapid/GoogleCloudSDKInstaller.exe", "$env:Temp\GoogleCloudSDKInstaller.exe")
+& $env:Temp\GoogleCloudSDKInstaller.exe
+```
+Or download installer manually: [GoogleCloudSDKInstaller.exe](https://dl.google.com/dl/cloudsdk/channels/rapid/GoogleCloudSDKInstaller.exe)
+
+**🐧 Linux (Ubuntu/Debian):**
+```bash
+# Add Google Cloud package repository
+curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo gpg --dearmor -o /usr/share/keyrings/cloud.google.gpg
+echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
+
+# Install
+sudo apt-get update && sudo apt-get install google-cloud-cli
+```
+
+### 🔑 Authenticate:
+```bash
+# Initialize and configure
+gcloud init
+
+# Set up Application Default Credentials (required for Vertex AI)
 gcloud auth application-default login
 ```
-This provides credentials to the container via the mounted `~/.config/gcloud` directory.
+
+### 📂 Credential Locations:
+The dev container automatically mounts your credentials:
+- **Mac/Linux**: `~/.config/gcloud` → `/home/vscode/.config/gcloud`  
+- **Windows**: `%APPDATA%\gcloud` → `/home/vscode/.config/gcloud`
+
+⚠️ **Critical**: Run these commands on your **host machine** (not inside the container)!
 
 4) Start development
 ```bash
@@ -44,15 +86,19 @@ cd frontend && npm install && npm run dev
 ```
 
 ## 🔧 What the Dev Container Sets Up Automatically
-- Python 3.10, Node.js 20, Git (via features)
-- A project-local virtualenv at `.venv` with `backend/requirements.txt` installed
-- Root toolchain for Tailwind/PostCSS via `npm install` at repo root
-- Frontend dependencies via `frontend/package.json`
-- Lean 4 via `elan` and a `lake build` of `backend/lean_verifier`
-- Environment variables for Vertex AI usage inside the container:
+- **Runtime**: Python 3.10, Node.js 20, Git (via dev container features)
+- **Backend**: Project-local virtualenv at `.venv` with core dependencies from `backend/requirements.txt`
+- **Frontend**: Tailwind/PostCSS toolchain + React dependencies via `npm install`
+- **Lean 4**: Installed via `elan` with automatic `lake build` of `backend/lean_verifier`
+- **Google Cloud**: Cross-platform credential mounting and verification
+  - Automatically detects macOS (`~/.config/gcloud`) or Windows (`%APPDATA%\gcloud`) paths
+  - Sets `GOOGLE_APPLICATION_CREDENTIALS` environment variable
+  - Validates Application Default Credentials during setup
+- **Environment Variables**: Pre-configured for Vertex AI integration
   - `VERTEX_AI_PROJECT_ID=altera-labs`
   - `VERTEX_AI_LOCATION=us-east1`
-- If present on your host, your Google Cloud credentials directory is mounted into the container. Note: the `gcloud` CLI is not installed in the container.
+  - `GOOGLE_APPLICATION_CREDENTIALS=/home/vscode/.config/gcloud/application_default_credentials.json`
+- **Performance**: Heavy ML dependencies (torch, transformers) are separated for faster builds
 
 ## 🏗️ Project Structure
 ```

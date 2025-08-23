@@ -1,0 +1,8 @@
+# Heavy ML dependencies for Altera Labs backend
+# Install these separately if ML capabilities are needed:
+# pip install -r requirements-ml.txt
+
+torch>=2.0.0
+transformers>=4.30.0
+accelerate>=0.20.0
+sentencepiece>=0.1.99
