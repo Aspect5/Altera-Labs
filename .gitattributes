@@ -1,0 +1,10 @@
+*.sh text eol=lf
+*.bash text eol=lf
+*.js text
+*.ts text
+*.jsx text
+*.tsx text
+*.json text
+*.md text
+*.yml text
+*.yaml text

@@ -28,13 +28,27 @@ cd "$LEAN_PROJECT_DIR"
 echo "--- Building Lean project (will be fast if dependencies are cached)... ---"
 lake build
 
-echo "--- Setting up root dependencies (Tailwind, PostCSS, etc.) ---"
-cd "$REPO_ROOT"
-npm install
-
 echo "--- Setting up frontend dependencies ---"
 cd "$REPO_ROOT/frontend"
+
+# Clean install to avoid platform-specific issues
+rm -f package-lock.json
+rm -rf node_modules
+
+# Install all dependencies
 npm install
+
+# Verify critical dependencies are installed, install if missing
+npm list react react-dom react-router-dom d3 > /dev/null 2>&1 || {
+    echo "--- Installing missing React dependencies ---"
+    npm install react@^19.1.0 react-dom@^19.1.0 react-router-dom@^7.7.1 d3@^7.9.0
+}
+
+# Ensure Tailwind CSS is installed
+npm list tailwindcss postcss autoprefixer > /dev/null 2>&1 || {
+    echo "--- Installing Tailwind CSS dependencies ---"
+    npm install -D tailwindcss postcss autoprefixer
+}
 
 echo "--- Returning to workspace root ---"
 cd "$REPO_ROOT"
