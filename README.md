@@ -8,6 +8,7 @@ An intelligent tutoring system combining Lean 4 theorem proving with AI to provi
 - **Docker Desktop**: [Install here](https://docs.docker.com/desktop/) - Required for dev containers
 - **VS Code** or **Cursor**: [VS Code](https://code.visualstudio.com/) | [Cursor](https://www.cursor.com/) - Your IDE
 - **Dev Containers Extension** (VS Code): [Install here](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
+- **Node.js**: [Install here](https://nodejs.org/en/download/) - Required for cross-platform setup scripts
 - **Google Cloud CLI**: See installation steps below - Required for AI integration
 
 **Not Required (Provided by Container):**
@@ -280,17 +281,35 @@ gcloud auth application-default login
 - Run `gcloud auth application-default login` on HOST before opening container
 - The build script will show platform-specific guidance if credentials are missing
 
-**Problem**: Windows gcloud path detection issues
+**Problem**: Windows initialization script failures
+The container uses a cross-platform Node.js script that should work on Windows. If you get script errors:
+
 ```bash
-# 1. Find your actual gcloud config directory:
+# 1. Ensure Node.js is installed on your Windows machine
+node --version
+
+# 2. Test the detection script manually:
+node .devcontainer/setup-gcloud-mount.js
+
+# 3. If Node.js is missing, install it:
+# Download from: https://nodejs.org/en/download/
+
+# 4. Find your actual gcloud config directory:
+gcloud info --format="value(config.paths.global_config_dir)"
+```
+
+**Problem**: Windows gcloud path detection issues  
+```bash
+# Run these commands in PowerShell or Command Prompt:
+
+# Check if gcloud is installed:
+gcloud --version
+
+# Find your gcloud config directory:
 gcloud info --format="value(config.paths.global_config_dir)"
 
-# 2. Run the detection script:
-.devcontainer/detect-gcloud-path.sh
-
-# 3. If the path is different than expected, you may need to:
-#    - Update the mount in .devcontainer/devcontainer.json
-#    - Use the exact path shown by the detection script
+# Check for credentials:
+dir "%APPDATA%\gcloud\application_default_credentials.json"
 ```
 
 **Problem**: Windows mount permission errors

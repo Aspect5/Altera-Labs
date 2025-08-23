@@ -36,7 +36,7 @@
     "source=${localEnv:HOME}/.config/gcloud,target=/home/vscode/.config/gcloud,type=bind,consistency=cached"
   ],
   
-  "initializeCommand": ".devcontainer/setup-gcloud-mount.sh",
+  "initializeCommand": "node .devcontainer/setup-gcloud-mount.js",
   
   "hostRequirements": {
     "cpus": 2,
