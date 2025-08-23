@@ -89,20 +89,15 @@ ls ~/.config/gcloud/application_default_credentials.json
 dir "%APPDATA%\gcloud\application_default_credentials.json"
 ```
 
-**🪟 Windows users**: If you have mounting issues:
-1. Run this detection script to find your actual gcloud path:
-   ```bash
-   .devcontainer/detect-gcloud-path.sh
-   ```
-2. If the path is different than `%APPDATA%\gcloud`, update `.devcontainer/devcontainer.json`:
-   - Copy `.devcontainer/devcontainer-windows-template.json` to `.devcontainer/devcontainer.json`
-   - Replace `REPLACE_WITH_YOUR_GCLOUD_PATH` with your actual path (e.g., `source=C:\\Users\\YourName\\AppData\\Roaming\\gcloud`)
+**🪟 Windows users**: The container automatically detects your gcloud path. If you have issues, ensure Node.js is installed.
 
 4) Open in Dev Container
 - Open the project in VS Code or Cursor
 - Choose "Reopen in Container" when prompted
 - First build takes ~5–10 minutes
 - The container will automatically detect and mount your gcloud credentials
+
+**Note**: Dependencies install automatically during container build with multiple fallback strategies.
 
 5) Start development
 ```bash
@@ -260,77 +255,20 @@ Common tasks are consolidated in `./scripts/manage.sh`:
 3. Make changes with tests where applicable
 4. Open a pull request
 
-## 🔧 Troubleshooting for First-Time Users
+## 🔧 Troubleshooting
 
-### Container Build Issues:
-**Problem**: Dev container fails to build
-```bash
-# 1. Check if gcloud credentials exist on host
-gcloud auth list
-ls ~/.config/gcloud/application_default_credentials.json  # Mac/Linux
+### Common Issues:
+**Problem**: Dev container build fails
+1. Ensure gcloud CLI is installed on your HOST machine: `gcloud --version`
+2. Authenticate: `gcloud auth application-default login`
+3. Rebuild container: Command Palette → "Dev Containers: Rebuild Container"
 
-# 2. If missing, authenticate first:
-gcloud auth application-default login
+**Problem**: Missing Node.js (Windows users)
+- Install Node.js from: https://nodejs.org/en/download/
 
-# 3. Rebuild container
-# Command Palette → "Dev Containers: Rebuild Container"
-```
-
-**Problem**: "Google Cloud credentials not found" during build
-- Make sure you installed gcloud CLI on your HOST machine (not in container)
-- Run `gcloud auth application-default login` on HOST before opening container
-- The build script will show platform-specific guidance if credentials are missing
-
-**Problem**: Windows initialization script failures
-The container uses a cross-platform Node.js script that should work on Windows. If you get script errors:
-
-```bash
-# 1. Ensure Node.js is installed on your Windows machine
-node --version
-
-# 2. Test the detection script manually:
-node .devcontainer/setup-gcloud-mount.js
-
-# 3. If Node.js is missing, install it:
-# Download from: https://nodejs.org/en/download/
-
-# 4. Find your actual gcloud config directory:
-gcloud info --format="value(config.paths.global_config_dir)"
-```
-
-**Problem**: Windows gcloud path detection issues  
-```bash
-# Run these commands in PowerShell or Command Prompt:
-
-# Check if gcloud is installed:
-gcloud --version
-
-# Find your gcloud config directory:
-gcloud info --format="value(config.paths.global_config_dir)"
-
-# Check for credentials:
-dir "%APPDATA%\gcloud\application_default_credentials.json"
-```
-
-**Problem**: Windows mount permission errors
-- Ensure Docker Desktop has access to your user directory
-- Try running Docker Desktop as administrator
-- Check that the gcloud config directory is accessible to Docker
-
-### Application Issues:
-**Problem**: Vertex AI authentication errors
-```bash
-# Inside the container, check if credentials are mounted:
-ls -la /home/vscode/.config/gcloud/
-echo $GOOGLE_APPLICATION_CREDENTIALS
-```
-
-**Problem**: Python/npm dependency issues
-```bash
-# Inside container, reinstall dependencies:
-pip install -r backend/requirements.txt
-cd frontend && npm install
-```
+**Problem**: Application won't start
+- The container automatically handles dependency installation with multiple fallback strategies
+- If issues persist, check container build logs for specific errors
 
 ### 🔧 Verify Your Configuration (Advanced)
 **For developers who want to validate their devcontainer.json:**

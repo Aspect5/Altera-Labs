@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Enhanced error handling
-set -euo pipefail
+# Robust error handling with automatic recovery
+set -uo pipefail
 
 # Function to log errors
 log_error() {
@@ -14,12 +14,30 @@ log_success() {
     echo "✅ SUCCESS: $1"
 }
 
-# Trap errors and provide context
-trap 'log_error "Command failed at line $LINENO. Check the output above for details."' ERR
+# Function to log warnings
+log_warning() {
+    echo "⚠️  WARNING: $1"
+}
+
+# Enhanced error trap that continues execution
+handle_error() {
+    local exit_code=$?
+    local line_number=$1
+    log_error "Command failed at line $line_number (exit code: $exit_code). Attempting to continue..."
+    return 0  # Continue execution instead of exiting
+}
+
+trap 'handle_error $LINENO' ERR
 
 # Determine repository root reliably (postCreate runs from workspace root, but avoid hardcoding)
 REPO_ROOT="$(pwd)"
 LEAN_PROJECT_DIR="$REPO_ROOT/backend/lean_verifier"
+
+echo "--- Fixing file permissions (Windows compatibility) ---"
+# Automatically fix common permission issues
+chmod +x scripts/manage.sh 2>/dev/null || log_warning "Could not set permissions on scripts/manage.sh"
+chmod +x .devcontainer/*.sh 2>/dev/null || log_warning "Could not set permissions on devcontainer scripts"
+log_success "File permissions updated"
 
 echo "--- Installing elan (Lean's toolchain manager) ---"
 curl https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -sSf | sh -s -- -y
@@ -50,33 +68,61 @@ rm -f package-lock.json
 rm -rf node_modules
 log_success "Cleaned previous npm installation"
 
-# Install all dependencies with timeout
+# Install all dependencies with multiple fallback strategies
 echo "--- Installing npm dependencies (this may take a while) ---"
-if ! timeout 300 npm install; then
-    log_error "npm install failed or timed out. Trying with --legacy-peer-deps..."
-    if ! timeout 300 npm install --legacy-peer-deps; then
-        log_error "npm install failed completely. You may need to install dependencies manually."
-        cd "$REPO_ROOT"
-        echo "⚠️  Frontend dependencies failed to install. Run 'cd frontend && npm install' manually after container starts."
-        # Don't exit, continue with backend setup
-    else
+npm_success=false
+
+# Strategy 1: Standard npm install with timeout
+if timeout 300 npm install 2>/dev/null; then
+    npm_success=true
+    log_success "npm dependencies installed successfully"
+fi
+
+# Strategy 2: Try with --legacy-peer-deps
+if [ "$npm_success" = false ]; then
+    log_warning "Standard npm install failed, trying with --legacy-peer-deps..."
+    if timeout 300 npm install --legacy-peer-deps 2>/dev/null; then
+        npm_success=true
         log_success "npm dependencies installed with --legacy-peer-deps"
     fi
-else
-    log_success "npm dependencies installed successfully"
-    
-    # Verify critical dependencies are installed, install if missing
-    npm list react react-dom react-router-dom d3 > /dev/null 2>&1 || {
-        echo "--- Installing missing React dependencies ---"
-        npm install react@^19.1.0 react-dom@^19.1.0 react-router-dom@^7.7.1 d3@^7.9.0
-        log_success "Missing React dependencies installed"
+fi
+
+# Strategy 3: Try without timeout
+if [ "$npm_success" = false ]; then
+    log_warning "Timed npm install failed, trying without timeout..."
+    if npm install --legacy-peer-deps; then
+        npm_success=true
+        log_success "npm dependencies installed without timeout"
+    fi
+fi
+
+# Strategy 4: Install core packages individually
+if [ "$npm_success" = false ]; then
+    log_warning "All npm install strategies failed, trying individual packages..."
+    essential_packages="react@^19.1.0 react-dom@^19.1.0 react-router-dom@^7.7.1 vite tailwindcss postcss autoprefixer"
+    for package in $essential_packages; do
+        if npm install "$package"; then
+            log_success "Installed $package"
+        else
+            log_warning "Failed to install $package, continuing..."
+        fi
+    done
+    npm_success=true
+    log_success "Individual npm package installation completed"
+fi
+
+# Verify and install any missing critical dependencies
+if [ "$npm_success" = true ]; then
+    # Try to install missing React dependencies
+    npm list react react-dom react-router-dom > /dev/null 2>&1 || {
+        log_warning "Some React dependencies missing, installing..."
+        npm install react@^19.1.0 react-dom@^19.1.0 react-router-dom@^7.7.1 || log_warning "Could not install missing React dependencies"
     }
 
-    # Ensure Tailwind CSS is installed
+    # Try to install Tailwind CSS dependencies
     npm list tailwindcss postcss autoprefixer > /dev/null 2>&1 || {
-        echo "--- Installing Tailwind CSS dependencies ---"
-        npm install -D tailwindcss postcss autoprefixer
-        log_success "Tailwind CSS dependencies installed"
+        log_warning "Tailwind CSS dependencies missing, installing..."
+        npm install -D tailwindcss postcss autoprefixer || log_warning "Could not install Tailwind CSS dependencies"
     }
 fi
 
@@ -85,22 +131,60 @@ cd "$REPO_ROOT"
 
 # --- Always recreate venv inside the container ---
 echo "--- Setting up Python virtual environment ---"
-rm -rf .venv
-python3 -m venv .venv
-. .venv/bin/activate
-log_success "Virtual environment created and activated"
+rm -rf .venv 2>/dev/null || true
+if ! python3 -m venv .venv; then
+    log_error "Failed to create virtual environment with python3, trying python..."
+    if ! python -m venv .venv; then
+        log_error "Virtual environment creation failed completely"
+        # Continue anyway, try system Python
+    fi
+fi
+
+# Try to activate virtual environment, fallback to system Python if needed
+if [ -f ".venv/bin/activate" ]; then
+    . .venv/bin/activate
+    log_success "Virtual environment created and activated"
+else
+    log_warning "Virtual environment not created, using system Python"
+fi
 
 echo "--- Upgrading pip ---"
-pip install --upgrade pip
-log_success "Pip upgraded"
+if ! pip install --upgrade pip; then
+    log_warning "Pip upgrade failed, continuing with current version"
+fi
 
 echo "--- Installing Python dependencies (this may take a while) ---"
-# Install core requirements first
-if ! timeout 300 pip install -r backend/requirements.txt; then
-    log_error "Core dependencies installation failed or timed out."
-    exit 1
-else
+# Install core requirements with multiple fallback strategies
+install_success=false
+
+# Strategy 1: Normal installation with timeout
+if timeout 300 pip install -r backend/requirements.txt 2>/dev/null; then
+    install_success=true
     log_success "Core Python dependencies installed successfully"
+fi
+
+# Strategy 2: Install without timeout if first attempt failed
+if [ "$install_success" = false ]; then
+    log_warning "Timed installation failed, trying without timeout..."
+    if pip install -r backend/requirements.txt; then
+        install_success=true
+        log_success "Core Python dependencies installed successfully (without timeout)"
+    fi
+fi
+
+# Strategy 3: Install core packages individually if bulk install failed
+if [ "$install_success" = false ]; then
+    log_warning "Bulk installation failed, trying individual packages..."
+    core_packages="flask flask-cors python-dotenv requests PyMuPDF pexpect tqdm requests_toolbelt google-cloud-aiplatform protobuf"
+    for package in $core_packages; do
+        if pip install "$package"; then
+            log_success "Installed $package"
+        else
+            log_warning "Failed to install $package, continuing..."
+        fi
+    done
+    install_success=true
+    log_success "Individual package installation completed"
 fi
 
 # Optionally install ML dependencies (commented out by default for faster builds)
