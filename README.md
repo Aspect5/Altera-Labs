@@ -58,14 +58,44 @@ echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.clou
 sudo apt-get update && sudo apt-get install google-cloud-cli
 ```
 
-### 🔑 Authenticate:
-```bash
-# Initialize and configure
-gcloud init
+### 🔑 Authenticate with Service Account:
 
-# Set up Application Default Credentials (required for Vertex AI)
-gcloud auth application-default login
+**📋 Setup Instructions:**
+
+1. **Get the service account key file** from the project owner
+   - Request access to the `service-account-key.json` file
+   - Contains credentials for: `service@altera-labs.iam.gserviceaccount.com`
+   - **Important**: This file is not included in the repository for security reasons
+
+2. **Place the key file in your project root:**
+```bash
+# Save the key file as 'service-account-key.json' in the Altera-Labs directory
+# The file should be at: ./service-account-key.json
 ```
+
+3. **Set the environment variable:**
+```bash
+# For current session:
+export GOOGLE_APPLICATION_CREDENTIALS="$(pwd)/service-account-key.json"
+
+# Make it permanent (add to your shell profile):
+echo 'export GOOGLE_APPLICATION_CREDENTIALS="'"$(pwd)/service-account-key.json"'"' >> ~/.bashrc
+source ~/.bashrc
+
+# For Windows (PowerShell):
+$env:GOOGLE_APPLICATION_CREDENTIALS = "$PWD\service-account-key.json"
+```
+
+4. **Verify authentication:**
+```bash
+gcloud auth application-default print-access-token
+# Should return an access token if setup correctly
+```
+
+**🔒 Security Notes:**
+- Never commit `service-account-key.json` to git (already in `.gitignore`)
+- Keep the key file secure and don't share it publicly
+- The dev container will automatically use this credential
 
 ### 📂 Credential Locations:
 The dev container automatically mounts your credentials:
@@ -259,12 +289,15 @@ Common tasks are consolidated in `./scripts/manage.sh`:
 
 ### Common Issues:
 **Problem**: Dev container build fails
-1. Ensure gcloud CLI is installed on your HOST machine: `gcloud --version`
-2. Authenticate: `gcloud auth application-default login`
+1. Ensure Docker is running: `docker info`
+2. Check you have the service account key file: `ls service-account-key.json`
 3. Rebuild container: Command Palette → "Dev Containers: Rebuild Container"
 
-**Problem**: Missing Node.js (Windows users)
-- Install Node.js from: https://nodejs.org/en/download/
+**Problem**: AI features not working (403 permission errors)
+1. Ensure the `service-account-key.json` file is in your project root
+2. Set the environment variable: `export GOOGLE_APPLICATION_CREDENTIALS="$(pwd)/service-account-key.json"`
+3. Restart your terminal and rebuild the container
+4. Verify with: `gcloud auth application-default print-access-token`
 
 **Problem**: Application won't start
 - The container automatically handles dependency installation with multiple fallback strategies

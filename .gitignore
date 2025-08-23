@@ -1,3 +1,8 @@
+# Google Cloud Service Account Keys (NEVER COMMIT THESE)
+service-account-key.json
+*service-account*.json
+*.json.key
+
 # General purpose ignores
 .DS_Store
 *.log
