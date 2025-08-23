@@ -56,4 +56,6 @@ yarn-error.log*
 # /backend/lean_verifier/Test.lean
 
 # Python virtual environments
-.venv/
+.venv/credentials.json
+*.json
+frontend/credentials.json
