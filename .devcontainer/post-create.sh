@@ -33,20 +33,37 @@ trap 'handle_error $LINENO' ERR
 REPO_ROOT="$(pwd)"
 LEAN_PROJECT_DIR="$REPO_ROOT/backend/lean_verifier"
 
-echo "--- Fixing file permissions (Windows compatibility) ---"
+echo "--- Fixing file permissions and cross-platform compatibility ---"
+# Configure git for cross-platform development (handle line endings)
+git config --global core.autocrlf input || log_warning "Could not configure git autocrlf"
+git config --global core.safecrlf false || log_warning "Could not configure git safecrlf"
+
 # Automatically fix common permission issues
 chmod +x scripts/manage.sh 2>/dev/null || log_warning "Could not set permissions on scripts/manage.sh"
 chmod +x .devcontainer/*.sh 2>/dev/null || log_warning "Could not set permissions on devcontainer scripts"
-log_success "File permissions updated"
+find scripts/ -name "*.sh" -exec chmod +x {} \; 2>/dev/null || log_warning "Could not set permissions on script files"
+
+log_success "File permissions and git configuration updated"
 
 echo "--- Installing elan (Lean's toolchain manager) ---"
 curl https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -sSf | sh -s -- -y
 . /home/vscode/.elan/env
 
-echo "--- Configuring .bashrc to make elan environment permanent ---"
+echo "--- Configuring shell environment to make elan permanent ---"
+# Configure for bash
 if ! grep -q ". /home/vscode/.elan/env" /home/vscode/.bashrc; then
   echo -e "\n# Add Lean/Elan to the PATH\n. /home/vscode/.elan/env\n" >> /home/vscode/.bashrc
 fi
+
+# Also configure for zsh if it exists (common on macOS)
+if [ -f "/home/vscode/.zshrc" ]; then
+  if ! grep -q ". /home/vscode/.elan/env" /home/vscode/.zshrc; then
+    echo -e "\n# Add Lean/Elan to the PATH\n. /home/vscode/.elan/env\n" >> /home/vscode/.zshrc
+  fi
+fi
+
+# Ensure PATH is set for current session
+export PATH="/home/vscode/.elan/bin:$PATH"
 
 if [ ! -f "$LEAN_PROJECT_DIR/lakefile.toml" ]; then
     echo "--- Lean project not found. Initializing a new one... ---"

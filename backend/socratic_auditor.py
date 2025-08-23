@@ -41,8 +41,12 @@ BACKEND_DIR = Path(__file__).parent.resolve()
 LEAN_PROJECT_PATH = BACKEND_DIR / 'lean_verifier'
 # The file that will be dynamically overwritten with the proof to be checked.
 LEAN_MAIN_FILE = LEAN_PROJECT_PATH / 'LeanVerifier.lean'
-# The path to the 'lake' executable. It's recommended to have this in the system's PATH.
-LAKE_EXECUTABLE_PATH = os.getenv('LAKE_EXECUTABLE_PATH', 'lake')
+# The path to the 'lake' executable with cross-platform compatibility
+import platform
+if platform.system() == 'Windows':
+    LAKE_EXECUTABLE_PATH = os.getenv('LAKE_EXECUTABLE_PATH', 'lake.exe')
+else:
+    LAKE_EXECUTABLE_PATH = os.getenv('LAKE_EXECUTABLE_PATH', 'lake')
 
 
 def get_llm_response(prompt: str, model_name: str = None, is_json: bool = False) -> str:

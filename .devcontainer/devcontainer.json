@@ -43,6 +43,21 @@
     "memory": "4gb",
     "storage": "32gb"
   },
+  
+  "otherPortsAttributes": {
+    "onAutoForward": "silent"
+  },
+  
+  "portsAttributes": {
+    "5173": {
+      "label": "Frontend (Vite)",
+      "onAutoForward": "notify"
+    },
+    "5000": {
+      "label": "Backend (Flask)",
+      "onAutoForward": "notify"
+    }
+  },
 
   "remoteUser": "vscode"
 }

@@ -118,11 +118,18 @@ function main() {
         possiblePaths.push(
             path.join(process.env.APPDATA || '', 'gcloud'),
             path.join(process.env.USERPROFILE || '', '.config', 'gcloud'),
-            path.join(process.env.USERPROFILE || '', 'AppData', 'Roaming', 'gcloud')
+            path.join(process.env.USERPROFILE || '', 'AppData', 'Roaming', 'gcloud'),
+            path.join(process.env.LOCALAPPDATA || '', 'gcloud'),
+            path.join(process.env.PROGRAMDATA || '', 'gcloud'),
+            // Additional Windows paths for different installation methods
+            path.join(process.env.USERPROFILE || '', '.gcloud'),
+            path.join('C:', 'Users', process.env.USERNAME || '', 'AppData', 'Roaming', 'gcloud')
         );
     } else {
         possiblePaths.push(
-            path.join(process.env.HOME || '', '.config', 'gcloud')
+            path.join(process.env.HOME || '', '.config', 'gcloud'),
+            path.join(process.env.HOME || '', '.gcloud'),  // Alternative location
+            '/opt/google-cloud-sdk/config'  // System-wide installation
         );
     }
     

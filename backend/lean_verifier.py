@@ -8,6 +8,7 @@ import json
 import re
 import asyncio
 import concurrent.futures
+import platform
 from typing import Dict, Any, Tuple, Optional, List
 from socratic_auditor import get_llm_response
 from datetime import datetime
@@ -24,6 +25,23 @@ from functools import lru_cache
 # Configure logging for this module
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Cross-platform executable utilities
+def get_executable_name(base_name: str) -> str:
+    """Get the correct executable name for the current platform."""
+    if platform.system() == 'Windows':
+        return f"{base_name}.exe"
+    return base_name
+
+def get_safe_subprocess_args(cmd_list: List[str]) -> List[str]:
+    """Ensure subprocess arguments are safe for the current platform."""
+    if platform.system() == 'Windows':
+        # On Windows, ensure the first argument (executable) has .exe if needed
+        if cmd_list and not cmd_list[0].endswith('.exe') and '/' not in cmd_list[0] and '\\' not in cmd_list[0]:
+            # Only add .exe if it's a simple command name without path separators
+            if cmd_list[0] in ['lean', 'lake', 'elan']:
+                cmd_list[0] = f"{cmd_list[0]}.exe"
+    return cmd_list
 
 class LeanVerifier:
     """
@@ -706,7 +724,7 @@ class LeanVerifier:
         
         try:
             # Check if Lean is installed
-            result = subprocess.run(['lean', '--version'], capture_output=True, text=True, timeout=10)
+            result = subprocess.run(get_safe_subprocess_args(['lean', '--version']), capture_output=True, text=True, timeout=10)
             if result.returncode == 0:
                 diagnosis["lean_installed"] = True
                 diagnosis["lean_version"] = result.stdout.strip()
