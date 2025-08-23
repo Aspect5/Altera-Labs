@@ -2,26 +2,29 @@
 
 An intelligent tutoring system combining Lean 4 theorem proving with AI to provide personalized math education.
 
-## Prerequisites (host)
-- Docker Desktop: [Install](https://docs.docker.com/desktop/)
-- VS Code or Cursor: [VS Code](https://code.visualstudio.com/) | [Cursor](https://www.cursor.com/)
-- Dev Containers (VS Code): [Extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
-- Google Cloud SDK (gcloud CLI): [Install](https://cloud.google.com/sdk/docs/install)
-- Optional (only if running outside the container): Node.js/npm [Install](https://nodejs.org/en/download/package-manager)
+## 📋 Prerequisites (Install on Host Machine)
+
+**Required:**
+- **Docker Desktop**: [Install here](https://docs.docker.com/desktop/) - Required for dev containers
+- **VS Code** or **Cursor**: [VS Code](https://code.visualstudio.com/) | [Cursor](https://www.cursor.com/) - Your IDE
+- **Dev Containers Extension** (VS Code): [Install here](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
+- **Google Cloud CLI**: See installation steps below - Required for AI integration
+
+**Not Required (Provided by Container):**
+- ✅ Python 3.10, Node.js 20, Git - Automatically installed in container
+- ✅ Lean 4, npm dependencies - Set up during container build
+- ✅ Virtual environment and Python packages - Created automatically
 
 ## 🎯 Quick Start
 
-1) Clone
+1) Clone the repository
 ```bash
 git clone <repository-url>
 cd Altera-Labs
 ```
 
-2) Open in Dev Container (recommended)
-- Open in VS Code or Cursor and choose “Reopen in Container”
-- First build takes ~5–10 minutes
-
-3) Install and Authenticate Google Cloud (one-time setup on your host)
+2) Install and Authenticate Google Cloud CLI (FIRST-TIME SETUP ON HOST)
+⚠️ **Do this BEFORE opening the dev container**
 
 ### 📥 Install Google Cloud CLI:
 
@@ -70,7 +73,24 @@ The dev container automatically mounts your credentials:
 
 ⚠️ **Critical**: Run these commands on your **host machine** (not inside the container)!
 
-4) Start development
+3) Verify your Google Cloud setup (optional but recommended)
+```bash
+# Check that gcloud is installed and authenticated
+gcloud auth list
+
+# Verify Application Default Credentials exist
+ls ~/.config/gcloud/application_default_credentials.json  # Mac/Linux
+# OR
+dir "%APPDATA%\gcloud\application_default_credentials.json"  # Windows
+```
+
+4) Open in Dev Container
+- Open the project in VS Code or Cursor
+- Choose "Reopen in Container" when prompted
+- First build takes ~5–10 minutes
+- The container will automatically detect and mount your gcloud credentials
+
+5) Start development
 ```bash
 # Use the management script (recommended)
 ./scripts/manage.sh development start
@@ -98,14 +118,15 @@ cd frontend && npm install && npm run dev
   - `VERTEX_AI_PROJECT_ID=altera-labs`
   - `VERTEX_AI_LOCATION=us-east1`
   - `GOOGLE_APPLICATION_CREDENTIALS=/home/vscode/.config/gcloud/application_default_credentials.json`
-- **Performance**: Heavy ML dependencies (torch, transformers) are separated for faster builds
+- **Performance**: Split dependency files for faster builds (see [Python Dependencies](#python-dependencies) below)
 
 ## 🏗️ Project Structure
 ```
 Altera-Labs/
 ├── backend/                 # Python Flask API and Lean integration
 │   ├── app.py               # Main application
-│   ├── requirements.txt     # Python dependencies
+│   ├── requirements.txt     # Core Python dependencies (auto-installed)
+│   ├── requirements-ml.txt  # Heavy ML dependencies (optional)
 │   ├── lean_verifier/       # Lean 4 project (lake)
 │   └── tests/               # Pytest-based tests
 ├── frontend/                # React + TypeScript (Vite)
@@ -155,6 +176,37 @@ pytest
 - Frontend: a test suite is not configured yet
 - Lean: build via `lake build`
 
+## 📦 Python Dependencies
+
+The project uses **two separate requirements files** for optimal performance:
+
+### `backend/requirements.txt` (Core Dependencies)
+**Installed automatically during container build**
+- Flask web framework and API dependencies
+- Google Cloud Vertex AI SDK
+- File processing utilities (PyMuPDF, pexpect)
+- Core networking and data handling libraries
+
+### `backend/requirements-ml.txt` (Heavy ML Dependencies)  
+**Optional - install manually when needed**
+- PyTorch (2GB+ download)
+- Transformers library
+- Accelerate and related ML libraries
+
+### Why Split?
+- **Faster container builds**: Core dependencies install in ~2 minutes vs 10+ minutes with ML libraries
+- **Selective installation**: Only install heavy ML packages when actually needed
+- **Development efficiency**: Most development work doesn't require the full ML stack
+
+### Installing ML Dependencies
+```bash
+# Inside the dev container, if you need ML capabilities:
+pip install -r backend/requirements-ml.txt
+
+# Or set environment variable to auto-install during container build:
+# Add INSTALL_ML_DEPS=true to your environment before building
+```
+
 ## 🛠️ Management Script
 Common tasks are consolidated in `./scripts/manage.sh`:
 ```bash
@@ -194,10 +246,47 @@ Common tasks are consolidated in `./scripts/manage.sh`:
 3. Make changes with tests where applicable
 4. Open a pull request
 
+## 🔧 Troubleshooting for First-Time Users
+
+### Container Build Issues:
+**Problem**: Dev container fails to build
+```bash
+# 1. Check if gcloud credentials exist on host
+gcloud auth list
+ls ~/.config/gcloud/application_default_credentials.json  # Mac/Linux
+
+# 2. If missing, authenticate first:
+gcloud auth application-default login
+
+# 3. Rebuild container
+# Command Palette → "Dev Containers: Rebuild Container"
+```
+
+**Problem**: "Google Cloud credentials not found" during build
+- Make sure you installed gcloud CLI on your HOST machine (not in container)
+- Run `gcloud auth application-default login` on HOST before opening container
+- The build script will show platform-specific guidance if credentials are missing
+
+### Application Issues:
+**Problem**: Vertex AI authentication errors
+```bash
+# Inside the container, check if credentials are mounted:
+ls -la /home/vscode/.config/gcloud/
+echo $GOOGLE_APPLICATION_CREDENTIALS
+```
+
+**Problem**: Python/npm dependency issues
+```bash
+# Inside container, reinstall dependencies:
+pip install -r backend/requirements.txt
+cd frontend && npm install
+```
+
 ## 📞 Getting Help
-- Check terminal logs
-- Re-run `.devcontainer/post-create.sh` inside the container
-- Ask the team
+- Check the troubleshooting section above
+- Review container build logs for specific error messages  
+- Ensure all prerequisites are installed on your HOST machine
+- Run the setup verification commands before opening the container
 
 ---
 
