@@ -31,25 +31,32 @@ if [ -d "$HOME/.config/gcloud" ]; then
     exit 0
 fi
 
-# Check for Windows path (%APPDATA%\gcloud)
-if [ -n "$APPDATA" ] && [ -d "$APPDATA/gcloud" ]; then
-    echo "✅ Found gcloud credentials at: $APPDATA/gcloud"
-    echo "   Windows APPDATA path detected"
-    if [ -f "$APPDATA/gcloud/application_default_credentials.json" ]; then
-        echo "✅ Application Default Credentials found"
-        echo "🚀 Ready for Vertex AI integration!"
-    else
-        echo "⚠️  ADC not found. Run: gcloud auth application-default login"
-    fi
-    exit 0
-fi
+# Check for Windows paths - multiple possible locations
+WINDOWS_GCLOUD_PATHS=(
+    "$APPDATA/gcloud"
+    "$USERPROFILE/.config/gcloud"
+    "$USERPROFILE/AppData/Roaming/gcloud"
+    "$LOCALAPPDATA/gcloud"
+    "$HOME/.config/gcloud"
+)
 
-# Check alternative Windows paths
-if [ -n "$USERPROFILE" ] && [ -d "$USERPROFILE/.config/gcloud" ]; then
-    echo "✅ Found gcloud credentials at: $USERPROFILE/.config/gcloud"
-    echo "   Windows alternative path detected"
-    exit 0
-fi
+for path in "${WINDOWS_GCLOUD_PATHS[@]}"; do
+    if [ -n "$path" ] && [ -d "$path" ]; then
+        echo "✅ Found gcloud credentials at: $path"
+        echo "   Windows path detected"
+        if [ -f "$path/application_default_credentials.json" ]; then
+            echo "✅ Application Default Credentials found"
+            echo "🚀 Ready for Vertex AI integration!"
+        else
+            echo "⚠️  ADC not found. Run: gcloud auth application-default login"
+        fi
+        
+        # Show the actual path for debugging
+        echo "📍 Detected gcloud config directory: $path"
+        echo "📋 For devcontainer.json, use this mount source: $path"
+        exit 0
+    fi
+done
 
 echo "❌ Google Cloud credentials not found!"
 echo ""
@@ -81,7 +88,13 @@ case $PLATFORM in
         echo "         & \$env:Temp\\GoogleCloudSDKInstaller.exe"
         echo "      3. Run: gcloud init"
         echo "      4. Authenticate: gcloud auth application-default login"
-        echo "      📁 Credentials will be stored at: %APPDATA%\\gcloud"
+        echo ""
+        echo "   🔍 To find your gcloud config directory on Windows, run:"
+        echo "      gcloud info --format=\"value(config.paths.global_config_dir)\""
+        echo "   Or check these common locations:"
+        echo "      %APPDATA%\\gcloud"
+        echo "      %USERPROFILE%\\.config\\gcloud"
+        echo "      %USERPROFILE%\\AppData\\Roaming\\gcloud"
         ;;
     *)
         echo "   🔧 General Installation:"

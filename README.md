@@ -73,16 +73,29 @@ The dev container automatically mounts your credentials:
 
 ⚠️ **Critical**: Run these commands on your **host machine** (not inside the container)!
 
-3) Verify your Google Cloud setup (optional but recommended)
+3) Verify your Google Cloud setup (IMPORTANT for Windows users)
 ```bash
 # Check that gcloud is installed and authenticated
 gcloud auth list
 
+# Find your actual gcloud config directory (especially important on Windows)
+gcloud info --format="value(config.paths.global_config_dir)"
+
 # Verify Application Default Credentials exist
-ls ~/.config/gcloud/application_default_credentials.json  # Mac/Linux
-# OR
-dir "%APPDATA%\gcloud\application_default_credentials.json"  # Windows
+# Mac/Linux:
+ls ~/.config/gcloud/application_default_credentials.json
+# Windows (use the path from the command above):
+dir "%APPDATA%\gcloud\application_default_credentials.json"
 ```
+
+**🪟 Windows users**: If you have mounting issues:
+1. Run this detection script to find your actual gcloud path:
+   ```bash
+   .devcontainer/detect-gcloud-path.sh
+   ```
+2. If the path is different than `%APPDATA%\gcloud`, update `.devcontainer/devcontainer.json`:
+   - Copy `.devcontainer/devcontainer-windows-template.json` to `.devcontainer/devcontainer.json`
+   - Replace `REPLACE_WITH_YOUR_GCLOUD_PATH` with your actual path (e.g., `source=C:\\Users\\YourName\\AppData\\Roaming\\gcloud`)
 
 4) Open in Dev Container
 - Open the project in VS Code or Cursor
@@ -267,6 +280,24 @@ gcloud auth application-default login
 - Run `gcloud auth application-default login` on HOST before opening container
 - The build script will show platform-specific guidance if credentials are missing
 
+**Problem**: Windows gcloud path detection issues
+```bash
+# 1. Find your actual gcloud config directory:
+gcloud info --format="value(config.paths.global_config_dir)"
+
+# 2. Run the detection script:
+.devcontainer/detect-gcloud-path.sh
+
+# 3. If the path is different than expected, you may need to:
+#    - Update the mount in .devcontainer/devcontainer.json
+#    - Use the exact path shown by the detection script
+```
+
+**Problem**: Windows mount permission errors
+- Ensure Docker Desktop has access to your user directory
+- Try running Docker Desktop as administrator
+- Check that the gcloud config directory is accessible to Docker
+
 ### Application Issues:
 **Problem**: Vertex AI authentication errors
 ```bash
@@ -280,6 +311,23 @@ echo $GOOGLE_APPLICATION_CREDENTIALS
 # Inside container, reinstall dependencies:
 pip install -r backend/requirements.txt
 cd frontend && npm install
+```
+
+### 🔧 Verify Your Configuration (Advanced)
+**For developers who want to validate their devcontainer.json:**
+```bash
+# Install Dev Container CLI (if not already installed)
+npm install -g @devcontainers/cli
+
+# Validate configuration syntax
+devcontainer read-configuration --workspace-folder .
+
+# Build container to test configuration
+devcontainer build --workspace-folder .
+
+# Test gcloud detection scripts
+.devcontainer/setup-gcloud-mount.sh
+.devcontainer/detect-gcloud-path.sh
 ```
 
 ## 📞 Getting Help
