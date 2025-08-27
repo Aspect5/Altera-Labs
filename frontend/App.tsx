@@ -1,6 +1,6 @@
 // frontend/App.tsx
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import { GraphNode, Edge, KnowledgeState, ChatMessage, ClassSummary, QuickStats, ClassData, GamificationState } from './types/components';
 
@@ -74,6 +74,7 @@ const App: React.FC = () => {
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [sessionMode, setSessionMode] = useState<'homework' | 'exam' | null>(null);
     const [rehydrationAttempted, setRehydrationAttempted] = useState<boolean>(false);
+    const startSessionRequestedRef = useRef<boolean>(false);
 
     // Gamification trigger functions
     const awardPoints = useCallback((action: string, amount: number) => {
@@ -203,15 +204,21 @@ const App: React.FC = () => {
 
     const initializeTutoringSession = useCallback(async () => {
         if (sessionStarted) return;
+        if (startSessionRequestedRef.current) return;
+        startSessionRequestedRef.current = true;
         setIsAiLoading(true);
         setError(null);
         try {
             const response = await startSession('homework');
             setProofCode(response.proofCode);
             setChatHistory([{ role: 'model', content: response.aiResponse }]);
+            setSessionId(response.sessionId);
+            setSessionMode('homework');
             setSessionStarted(true);
         } catch (e: any) {
             setError(e.message || 'Failed to start tutoring session.');
+            // Allow retry if the request failed
+            startSessionRequestedRef.current = false;
         } finally {
             setIsAiLoading(false);
         }
@@ -489,20 +496,15 @@ const App: React.FC = () => {
             setEdges(classData.edges);
             setKnowledgeState(classData.knowledgeState);
             
-            // Start session
-            const response = await startSession('homework');
-            setSessionId(response.sessionId);
-            setSessionMode('homework');
-            setProofCode(response.proofCode);
-            setChatHistory([{ role: 'model', content: response.aiResponse }]);
-            setSessionStarted(true);
+            // Start session (guarded)
+            await initializeTutoringSession();
             
             navigate('/tutor');
         } catch (error: any) {
             console.error('handleSelectClass: Failed to start session:', error);
             setError(error.message || 'Failed to start session');
         }
-    }, [navigate]);
+    }, [navigate, initializeTutoringSession]);
 
     const handleCreateNewClass = useCallback(() => {
         navigate('/setup');
