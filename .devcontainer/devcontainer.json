@@ -16,10 +16,11 @@
   "containerEnv": {
     "VERTEX_AI_PROJECT_ID": "altera-labs",
     "VERTEX_AI_LOCATION": "us-east1",
-    "GOOGLE_APPLICATION_CREDENTIALS": "/home/vscode/.config/gcloud/application_default_credentials.json"
+    "GOOGLE_APPLICATION_CREDENTIALS": "/home/vscode/.config/gcloud/application_default_credentials.json",
+    "SHELL": "/bin/bash"
   },
 
-  "postCreateCommand": "sh .devcontainer/post-create.sh",
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
 
   "customizations": {
     "vscode": {
@@ -33,7 +34,7 @@
 
   "forwardPorts": [5173, 5000],
   "mounts": [
-    "source=${localEnv:HOME}/.config/gcloud,target=/home/vscode/.config/gcloud,type=bind,consistency=cached"
+    "source=${localWorkspaceFolder}/.devcontainer/_gcloud,target=/home/vscode/.config/gcloud,type=bind,consistency=cached"
   ],
   
   "initializeCommand": "node .devcontainer/setup-gcloud-mount.js",

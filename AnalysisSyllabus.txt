@@ -1,0 +1,33 @@
+
+Week	Date	Lecture Topic	Relevant Chapter(s) of Rudin's book
+1	August 25th	Introduction, ordered sets, supremum and infimum.	1
+August 27th	Fields, the real numbers, and roots.	1
+2	September 1st	Labour day, no lecture.	
+September 3rd	Extended reals, complex numbers, Euclidean space, the triangle and Cauchy--Schwartz inequality	1
+3	September 8th	Finite, countable, and uncountable sets	2
+September 10th (Homework 1 due)	Cantor's diagonalisation argument, metric spaces, open and closed sets	2
+4	September 15th	More on open and closed sets and closure	2
+September 17th (Homework 2 due)	Relative openness and compactness	2
+5	September 22nd	More on compactness and the Heine--Borel theorem	2
+September 24th (Homework 3 due)	Perfect sets, the uncountability of the real line, and the Cantor set	2
+6	September 29th	Connectedness	2
+October 1st (Homework 4 due)	Limits of sequences, the limit laws	3
+7	October 6th	Subsequences, Cauchy sequences, and completeness	3
+October 8th (Homework 5 due)	Monotone sequences, limsup and liminf	3
+8	October 13th	Series	3
+October 15th	Quiz 1	
+9	October 20th	Continuity	4
+October 22nd (Homework 6 due)	The extreme value theorem and uniform continuity	4
+10	October 27th	Continuity and connectedness, discontinuities, and monotone functions	4
+October 29th (Homework 7 due)	Normed vector spaces	7
+11	November 3rd	Differentiation	5
+November 5th (Homework 8 due)	Darboux's and Taylor's theorem, multivariable differentiation	5
+12	November 10th	Sequences and series of functions, uniform continuity	7
+November 12th (Homework 9 due)	More on uniform continuity and function spaces	7
+13	November 17th	A continuous but nowhere differentiable function, equicontinuity	7
+November 19th (Homework 10 due)	The Arzelà--Ascoli theorem	7
+14	November 24th	Fall recess, no lecture.	
+November 26th	Fall recess, no lecture.	
+15	December 1st	Quiz 2	
+December 3rd	Construction of the real numbers and equivalence of the completeness axioms (non-examinable)	1 - Appendix
+ 

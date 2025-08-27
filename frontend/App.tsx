@@ -73,6 +73,7 @@ const App: React.FC = () => {
     // Session state management
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [sessionMode, setSessionMode] = useState<'homework' | 'exam' | null>(null);
+    const [rehydrationAttempted, setRehydrationAttempted] = useState<boolean>(false);
 
     // Gamification trigger functions
     const awardPoints = useCallback((action: string, amount: number) => {
@@ -267,6 +268,37 @@ const App: React.FC = () => {
         }
     }, [loadSessionState]);
 
+    // Rehydrate class data if user refreshes or lands directly on /tutor (attempt once)
+    useEffect(() => {
+        if (window.location.pathname !== '/tutor' || rehydrationAttempted) return;
+        setRehydrationAttempted(true);
+        const saved = localStorage.getItem('sessionState');
+        let savedClassId: string | null = null;
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                savedClassId = parsed.currentClassId || null;
+            } catch {}
+        }
+        const classIdToLoad = savedClassId || currentClassId;
+        if (classIdToLoad) {
+            (async () => {
+                try {
+                    const classData = await dashboardService.getClassData(classIdToLoad as string);
+                    setNodes(classData.nodes);
+                    setEdges(classData.edges);
+                    setKnowledgeState(classData.knowledgeState);
+                } catch (e: any) {
+                    console.error('Failed to rehydrate class data:', e);
+                    setError(e.message || 'Failed to load class data. Returning to dashboard.');
+                    navigate('/dashboard');
+                }
+            })();
+        } else {
+            navigate('/dashboard');
+        }
+    }, [rehydrationAttempted, currentClassId, navigate]);
+
     // Save session state when it changes
     useEffect(() => {
         if (sessionId) {
@@ -279,6 +311,13 @@ const App: React.FC = () => {
             initializeTutoringSession();
         }
     }, [nodes, sessionStarted, initializeTutoringSession]);
+
+    // Ensure session starts on Tutor route even if nodes are empty
+    useEffect(() => {
+        if (!sessionStarted && window.location.pathname === '/tutor') {
+            initializeTutoringSession();
+        }
+    }, [sessionStarted, initializeTutoringSession]);
 
     const handleCreateClass = useCallback(async (className: string, syllabusFile: File | null, homeworkFile: File | null) => {
         setIsCreatingClass(true);

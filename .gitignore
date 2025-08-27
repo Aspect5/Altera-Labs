@@ -2,6 +2,7 @@
 service-account-key.json
 *service-account*.json
 *.json.key
+.devcontainer/_gcloud/
 
 # General purpose ignores
 .DS_Store

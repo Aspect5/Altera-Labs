@@ -18,9 +18,9 @@ from pathlib import Path
 from typing import Tuple, Dict, Any
 
 # --- AI Model Imports ---
-# Use the proper Vertex AI SDK for Google Cloud (updated to avoid deprecation)
-import vertexai
-from vertexai.generative_models import GenerativeModel, Part
+# Use Google Gen AI SDK (Vertex-compatible) to avoid deprecation
+from google import genai
+from google.genai.types import GenerateContentConfig
 
 # --- Local Imports ---
 # A fallback stub for local development or when the API is unavailable.
@@ -68,45 +68,46 @@ def get_llm_response(prompt: str, model_name: str = None, is_json: bool = False)
     if model_name is None:
         model_name = os.environ.get("DEFAULT_LLM_MODEL", "gemini-2.5-flash")
     
-    # Try to use Vertex AI SDK (proper Google Cloud integration)
+    # Use Google Gen AI SDK with Vertex backend
     try:
-        # Initialize Vertex AI with project and location from environment
+        # Initialize client with project and location from environment
         project_id = os.environ.get("VERTEX_AI_PROJECT_ID")
         location = os.environ.get("VERTEX_AI_LOCATION")
         
         if project_id and location:
-            # Initialize Vertex AI
-            vertexai.init(project=project_id, location=location)
-            
-            # Create the generative model
-            model = GenerativeModel(model_name)
-            
+            client = genai.Client(vertexai=True, project=project_id, location=location)
+
             # Configure generation parameters
-            generation_config = {
-                "temperature": 0.3,
-                "top_p": 0.95,
-                "max_output_tokens": 20000,
-            }
             if is_json:
-                generation_config["response_mime_type"] = "application/json"
-            
-            # Generate content using the updated API
-            response = model.generate_content(
-                [Part.from_text(prompt)],
-                generation_config=generation_config
+                config = GenerateContentConfig(
+                    temperature=0.3,
+                    top_p=0.95,
+                    max_output_tokens=20000,
+                    response_mime_type="application/json",
+                )
+            else:
+                config = GenerateContentConfig(
+                    temperature=0.3,
+                    top_p=0.95,
+                    max_output_tokens=20000,
+                )
+
+            # Generate content using the Gen AI SDK
+            response = client.models.generate_content(
+                model=model_name,
+                contents=prompt,
+                config=config,
             )
-            
-            if response and hasattr(response, 'text') and response.text:
-                return response.text
+
+            text = getattr(response, "output_text", None) or getattr(response, "text", None)
+            if response and text:
+                return text
             else:
                 raise ValueError("Received an empty or invalid response from Vertex AI")
                 
         else:
             raise ValueError("VERTEX_AI_PROJECT_ID and VERTEX_AI_LOCATION must be set for Vertex AI")
             
-    except ImportError:
-        logging.warning("Vertex AI SDK not available, falling back to local stub")
-        return local_llm_stub.generate_response(prompt, is_json_output=is_json)
     except Exception as e:
         logging.error(f"Vertex AI API call failed: {e}, falling back to local stub")
         return local_llm_stub.generate_response(prompt, is_json_output=is_json)

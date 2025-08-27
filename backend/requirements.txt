@@ -10,6 +10,7 @@ tqdm
 requests_toolbelt
 google-cloud-aiplatform>=1.40.0
 protobuf>=3.20.0
+google-genai>=1.30.0
 
 # Heavy ML dependencies - install separately if needed
 # Uncomment these lines if you need ML capabilities:

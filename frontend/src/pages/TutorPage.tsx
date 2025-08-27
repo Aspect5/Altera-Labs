@@ -194,12 +194,17 @@ const TutorPage: React.FC<TutorPageProps> = ({
   // Debug logging (reduced for production)
   // REMOVED: console.log statements that run on every render for better performance
 
-  // Defensive checks
-  if (!nodes || nodes.length === 0) {
+  // Defensive checks (allow empty nodes to still render chat)
+  if (!chatHistory) {
     return (
       <div className="flex flex-col items-center justify-center h-full p-8">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400 mb-4"></div>
-        <p className="text-slate-400">Loading session...</p>
+        <p className="text-red-400 mb-4">Error: Chat history not available</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg transition-colors"
+        >
+          Refresh Page
+        </button>
       </div>
     );
   }
