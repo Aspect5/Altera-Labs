@@ -15,10 +15,17 @@ const AchievementSystem: React.FC<AchievementSystemProps> = ({
 
   // Check for newly unlocked achievements
   useEffect(() => {
-    const newlyUnlocked = gamificationState.achievements.filter(
-      achievement => achievement.unlockedAt && 
-      achievement.unlockedAt.getTime() > Date.now() - 5000 // Last 5 seconds
-    );
+    const newlyUnlocked = gamificationState.achievements
+      .map(a => ({
+        ...a,
+        unlockedAt: a.unlockedAt && typeof (a.unlockedAt as any) === 'string' 
+          ? new Date(a.unlockedAt as unknown as string) 
+          : a.unlockedAt
+      }))
+      .filter(
+        achievement => achievement.unlockedAt instanceof Date &&
+        achievement.unlockedAt.getTime() > Date.now() - 5000 // Last 5 seconds
+      );
 
     if (newlyUnlocked.length > 0) {
       setShowNotification(newlyUnlocked[0]);

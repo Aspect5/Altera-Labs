@@ -173,6 +173,13 @@ const App: React.FC = () => {
         if (saved) {
             try {
                 const sessionState = JSON.parse(saved);
+                // Normalize dates in gamificationState (unlockedAt may be serialized)
+                if (sessionState.gamificationState && Array.isArray(sessionState.gamificationState.achievements)) {
+                    sessionState.gamificationState.achievements = sessionState.gamificationState.achievements.map((a: any) => ({
+                        ...a,
+                        unlockedAt: a && a.unlockedAt ? new Date(a.unlockedAt) : null,
+                    }));
+                }
                 setSessionId(sessionState.sessionId);
                 setSessionMode(sessionState.sessionMode);
                 setCurrentClassId(sessionState.currentClassId);
