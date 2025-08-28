@@ -1,6 +1,6 @@
 import { ClassSummary, QuickStats, ClassData } from '../types';
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = '/api';
 
 export const dashboardService = {
   // Get all classes for dashboard

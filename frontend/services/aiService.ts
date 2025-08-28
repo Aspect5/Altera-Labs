@@ -10,7 +10,7 @@
 import { GraphNode, Edge, KnowledgeState } from '../types';
 
 // --- API Configuration ---
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = '/api';
 
 // --- Type Definitions for API Responses ---
 interface StartSessionResponse {

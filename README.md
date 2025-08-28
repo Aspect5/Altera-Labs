@@ -62,7 +62,9 @@ sudo apt-get update && sudo apt-get install google-cloud-cli
 
 **📋 Setup Instructions:**
 
-1. **Get the service account key file** from the project owner
+1. **Login to your Google cloud account**: 'gcloud auth login'
+
+2. **Get the service account key file** from the project owner
    - Request access to the `service-account-key.json` file
    - Contains credentials for: `service@altera-labs.iam.gserviceaccount.com`
    - **Important**: This file is not included in the repository for security reasons
