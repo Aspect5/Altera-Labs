@@ -277,6 +277,11 @@ def verify_step():
 def upload_assignment():
     if 'user_id' not in session:
         return jsonify({"error": "No active session."}), 401
+    # Expect multipart/form-data with file + metadata fields
+    class_id = request.form.get('classId')
+    document_type = request.form.get('documentType', 'assignment')
+    if not class_id:
+        return jsonify({"error": "Request must include 'classId'."}), 400
     if 'file' not in request.files:
         return jsonify({"error": "No file part."}), 400
     file = request.files['file']
@@ -286,7 +291,35 @@ def upload_assignment():
         file_path, error = rag_manager.save_assignment_file(session['user_id'], file)
         if error:
             return jsonify({"error": error}), 500
-        return jsonify({"message": "File uploaded successfully.", "filePath": file_path}), 200
+        # Persist document metadata to the class record
+        try:
+            classes = load_classes()
+            if class_id not in classes:
+                return jsonify({"error": "Class not found."}), 404
+            # Initialize documents array if missing
+            documents = classes[class_id].get('documents', [])
+            document_meta = {
+                'documentId': str(uuid.uuid4()),
+                'filename': file.filename,
+                'documentType': document_type,
+                'filePath': file_path,
+                'uploadTimestamp': datetime.now().isoformat(),
+                'status': 'uploaded'
+            }
+            documents.append(document_meta)
+            classes[class_id]['documents'] = documents
+            # Save and update in-memory cache
+            save_classes(classes)
+            global CLASSES
+            CLASSES[class_id] = classes[class_id]
+            return jsonify({
+                "message": "File uploaded successfully.",
+                "filePath": file_path,
+                "document": document_meta
+            }), 200
+        except Exception as e:
+            app.logger.error(f"Failed to persist document metadata: {e}", exc_info=True)
+            return jsonify({"error": "File saved but metadata persistence failed."}), 500
     return jsonify({"error": "Invalid file."}), 400
 
 def create_and_get_class(class_name: str, file_stream: Any, file_type: str) -> Dict[str, Any]:
@@ -325,6 +358,8 @@ def create_and_get_class(class_name: str, file_stream: Any, file_type: str) -> D
         "concepts": graph_data.get("nodes", []),
         "edges": graph_data.get("edges", []),
         "knowledgeState": default_knowledge_state,
+        # Mission 1: initialize documents array for class-level document tracking
+        "documents": [],
     }
     CLASSES[class_id] = new_class
     
