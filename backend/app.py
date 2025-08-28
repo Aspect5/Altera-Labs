@@ -10,7 +10,13 @@ from pathlib import Path
 from typing import Dict, Any
 from datetime import datetime
 
-from dotenv import load_dotenv
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    # Gracefully continue if python-dotenv isn't installed (e.g., Windows env not set up yet)
+    def load_dotenv(*args, **kwargs):  # type: ignore
+        logging.warning("python-dotenv not installed; skipping .env loading. Environment variables must be set externally.")
+        return False
 from flask import Flask, request, jsonify, session
 from flask_cors import CORS
 import fitz
@@ -25,7 +31,15 @@ from config.developer_config import developer_config, developer_logger
 from llm_performance_tester import performance_tester 
 
 # --- FIXED: Load environment variables and initialize AI services at startup ---
-load_dotenv()
+# Try loading .env from repo root and backend directory for cross-platform compatibility
+try:
+    repo_root = Path(__file__).resolve().parent.parent
+    backend_dir = Path(__file__).resolve().parent
+    # Load root .env first, then backend/.env to allow local overrides
+    load_dotenv(repo_root / ".env")
+    load_dotenv(backend_dir / ".env")
+except Exception as e:
+    logging.warning(f".env loading encountered an issue: {e}")
 
 # Initialize Google AI
 try:

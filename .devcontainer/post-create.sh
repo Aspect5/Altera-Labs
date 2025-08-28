@@ -224,6 +224,36 @@ if [ ! -f ".venv/bin/python3" ]; then
   ln -s python .venv/bin/python3
 fi
 
+# --- Validate and repair critical Python packages ---
+echo "--- Validating critical Python packages ---"
+# Helper function to check package import and reinstall if broken
+ensure_python_package() {
+  local pkg_name="$1"      # e.g., google-cloud-aiplatform
+  local import_path="$2"   # e.g., google.cloud.aiplatform
+  if ! python - <<PY
+import sys
+try:
+    __import__("$import_path")
+except Exception as e:
+    sys.exit(1)
+PY
+  then
+    log_warning "Package '$pkg_name' failed import check, attempting clean reinstall..."
+    pip uninstall -y "$pkg_name" >/dev/null 2>&1 || true
+    if ! pip install --no-cache-dir --upgrade --force-reinstall "$pkg_name"; then
+      log_warning "Reinstall of '$pkg_name' failed. Attempting one more time without cache..."
+      pip install --no-cache-dir "$pkg_name" || log_warning "Final attempt to install '$pkg_name' failed."
+    else
+      log_success "Reinstalled '$pkg_name' successfully"
+    fi
+  else
+    log_success "Validated package '$pkg_name'"
+  fi
+}
+
+# Specifically validate google-cloud-aiplatform which can be partially installed if a timed install was interrupted
+ensure_python_package "google-cloud-aiplatform" "google.cloud.aiplatform"
+
 # --- Auto-activate venv in every new terminal ---
 VENV_ACTIVATE=". $REPO_ROOT/.venv/bin/activate"
 for PROFILE in /home/vscode/.bashrc /home/vscode/.zshrc /home/vscode/.profile; do
