@@ -1,15 +1,13 @@
 {
   "name": "Altera Labs Lean Environment",
-  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "image": "mcr.microsoft.com/devcontainers/python:3.10-bookworm",
   "features": {
-    "ghcr.io/devcontainers/features/python:1": {
-      "version": "3.10"
-    },
     "ghcr.io/devcontainers/features/node:1": {
       "version": "20"
     },
     "ghcr.io/devcontainers/features/git:1": {
-      "version": "latest"
+      "version": "os-provided",
+      "ppa": "false"
     }
   },
 
@@ -34,14 +32,13 @@
 
   "forwardPorts": [5173, 5000],
   "mounts": [
-    "source=${localWorkspaceFolder}/.devcontainer/_gcloud,target=/home/vscode/.config/gcloud,type=bind,consistency=cached"
+    "source=${localWorkspaceFolder}/.devcontainer/_gcloud,target=/home/vscode/.config/gcloud,type=bind,consistency=cached,readonly"
   ],
   
   "initializeCommand": "node .devcontainer/setup-gcloud-mount.js",
   
   "hostRequirements": {
     "cpus": 2,
-    "memory": "4gb",
     "storage": "32gb"
   },
   

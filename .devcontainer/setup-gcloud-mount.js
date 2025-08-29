@@ -175,7 +175,9 @@ function main() {
         console.log('2. Run: gcloud init');
         console.log('3. Run: gcloud auth application-default login');
         console.log('4. Rebuild the dev container');
-        process.exit(1);
+        // Do not fail the devcontainer build if credentials are missing.
+        // The container can still be built, and credentials can be added later.
+        process.exit(0);
     }
 }
 
