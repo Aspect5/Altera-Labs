@@ -1,5 +1,5 @@
 {
-  "developer_mode": false,
+  "developer_mode": true,
   "max_auto_solve_attempts": 5,
   "log_level": "INFO",
   "enable_detailed_logging": true,

@@ -736,5 +736,91 @@
       "total_time": 37.27779984474182,
       "strategy": "parallel_universal"
     }
+  },
+  {
+    "timestamp": "2025-08-29T17:50:22.009695",
+    "type": "config_change",
+    "data": {
+      "action": "set_developer_mode",
+      "enabled": true
+    }
+  },
+  {
+    "timestamp": "2025-08-29T17:50:22.011359",
+    "type": "config_change",
+    "data": {
+      "action": "set_max_attempts",
+      "max_attempts": 5
+    }
+  },
+  {
+    "timestamp": "2025-08-29T17:50:25.563575",
+    "type": "config_change",
+    "data": {
+      "action": "set_developer_mode",
+      "enabled": true
+    }
+  },
+  {
+    "timestamp": "2025-08-29T17:50:25.568073",
+    "type": "config_change",
+    "data": {
+      "action": "set_max_attempts",
+      "max_attempts": 5
+    }
+  },
+  {
+    "timestamp": "2025-08-29T17:50:47.747706",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 1,
+      "tactic": "simp",
+      "success": true,
+      "llm_time": 0.0,
+      "verify_time": 71.12393975257874,
+      "total_time": 71.12393975257874,
+      "strategy": "parallel_generic"
+    }
+  },
+  {
+    "timestamp": "2025-08-30T17:50:44.516063",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 1,
+      "tactic": "simp",
+      "success": true,
+      "llm_time": 0.0,
+      "verify_time": 67.57815909385681,
+      "total_time": 67.57815909385681,
+      "strategy": "parallel_generic"
+    }
+  },
+  {
+    "timestamp": "2025-08-30T18:02:23.582988",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 2,
+      "tactic": "sorry",
+      "success": false,
+      "error": "Syntax validation failed: Syntax validation failed: No valid Lean tactics found",
+      "llm_time": 5.433640956878662,
+      "verify_time": 15.907700300216675,
+      "total_time": 95.28204822540283,
+      "strategy": "generic"
+    }
+  },
+  {
+    "timestamp": "2025-08-30T18:02:40.167299",
+    "type": "auto_solve_attempt",
+    "data": {
+      "attempt": 3,
+      "tactic": "linarith",
+      "success": false,
+      "error": "Syntax validation failed: Syntax validation failed: No valid Lean tactics found",
+      "llm_time": 16.578144550323486,
+      "verify_time": 0.00029206275939941406,
+      "total_time": 111.86635851860046,
+      "strategy": "generic"
+    }
   }
 ]

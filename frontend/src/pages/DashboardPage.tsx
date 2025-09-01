@@ -1,6 +1,7 @@
 import React from 'react';
 import { ClassSummary, QuickStats } from '../../types/components';
 import { ClassHealthCard, QuickStatsPanel } from '../../components';
+import { dashboardService } from '../../services';
 
 interface DashboardPageProps {
   classes: ClassSummary[];
@@ -120,6 +121,14 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                 key={classData.id}
                 classData={classData}
                 onClick={() => onSelectClass(classData.id)}
+                onDelete={async (id) => {
+                  try {
+                    await dashboardService.deleteClass(id);
+                    window.location.reload();
+                  } catch (e) {
+                    alert('Failed to delete class.');
+                  }
+                }}
               />
             ))}
           </div>

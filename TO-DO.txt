@@ -1,0 +1,178 @@
+Im using python, how do I find my Neoj-urI?
+To find your Neo4j URI when using Python, you'll typically use the following format:
+neo4j://<hostname>:<port>
+For example, if your Neo4j instance is running on your local machine with the default port, your URI would be:
+neo4j://localhost:7687
+Make sure you have the Neo4j Python driver installed. You can install it using pip:
+pip install neo4j
+Once you have the URI, you can connect to your Neo4j database like this:
+from neo4j import GraphDatabase
+
+uri = "neo4j://localhost:7687"
+driver = GraphDatabase.driver(uri, auth=("username", "password"))
+
+# Example function to run a simple query
+def run_query(query):
+    with driver.session() as session:
+        result = session.run(query)
+        for record in result:
+            print(record)
+
+run_query("MATCH (n) RETURN n LIMIT 5")
+
+
+For more details, check out the following links:
+Neo4j Python Documentation
+Neo4j Python Driver Installation
+Refresh
+
+Bad answer
+
+1/10
+im using aura
+If you're using Neo4j Aura, your Neo4j URI typically follows this format:
+neo4j+s://<your-instance-id>.databases.neo4j.io:7687
+
+
+You'll find your instance ID in the Aura console when you set up your database. Make sure you also have your username and password ready for authentication. Here’s a sample connection code in Python:
+from neo4j import GraphDatabase
+
+uri = "neo4j+s://<your-instance-id>.databases.neo4j.io:7687"
+driver = GraphDatabase.driver(uri, auth=("username", "password"))
+
+# Example function to run a simple query
+def run_query(query):
+    with driver.session() as session:
+        result = session.run(query)
+        for record in result:
+            print(record)
+
+run_query("MATCH (n) RETURN n LIMIT 5")
+
+
+For more detailed information, you might find these resources helpful:
+Authentication on Aura
+Using Cypher on Aura
+Create an AuraDB instance in the terminal
+
+### Neo4j + pipeline setup: step-by-step
+
+- • Choose a Neo4j deployment:
+  - • Neo4j Aura (recommended): Create a new DB, copy `NEO4J_URI`, `NEO4J_USERNAME`, and `NEO4J_PASSWORD` from the Aura console. Aura includes APOC core (needed for dynamic labels).
+  - • Neo4j Desktop (local): Create a DB, enable the APOC plugin for the DB, then start it. You don’t need file:// imports since we load CSVs via HTTPS.
+
+- • Prepare Google Cloud:
+  - • Authenticate ADC on your host:
+    ```bash
+    gcloud auth application-default login
+    ```
+  - • Create a GCS bucket (public-read for LOAD CSV over HTTPS):
+    ```bash
+    gsutil mb -p <GCP_PROJECT_ID> -l us-central1 gs://<BUCKET_NAME>
+    gsutil iam ch allUsers:objectViewer gs://<BUCKET_NAME>
+    ```
+    - If you prefer not to make it public, use signed URLs instead (not enabled in the current script).
+
+- • Configure the backend env:
+  - • Create `backend/.env` with:
+    ```bash
+    NEO4J_URI="neo4j+s://<instance-id>.databases.neo4j.io"
+    NEO4J_USERNAME="neo4j"
+    NEO4J_PASSWORD="<your-password>"
+
+    GOOGLE_CLOUD_PROJECT="<your-gcp-project-id>"
+    GCS_BUCKET_NAME="<your-bucket>"
+
+    VERTEX_AI_PROJECT_ID="<your-gcp-project-id>"
+    VERTEX_AI_LOCATION="us-central1"
+    # Optional:
+    EMBEDDING_MODEL_NAME="textembedding-gecko@003"
+    EMBEDDING_BATCH_SIZE="250"
+    EMBEDDING_VECTOR_DIM="768"
+    EMBEDDING_SIMILARITY="cosine"
+    PIPELINE_CLEANUP="false"
+    ```
+
+- • Open the devcontainer and install deps:
+  - • Open the project in the devcontainer (dev-container+ URI). In the container terminal:
+    ```bash
+    pip install -r backend/requirements.txt
+    ```
+  - • The post-create script installs Lean/lake and `jixia`. If `jixia` is missing:
+    ```bash
+    cargo install jixia --locked
+    ```
+
+- • Run the pipeline:
+  - • Full end-to-end (Stages 1–6):
+    ```bash
+    ./scripts/manage.sh pipeline mathlib:all
+    ```
+  - • Or run stage-by-stage:
+    ```bash
+    ./scripts/manage.sh pipeline mathlib           # Stage 1
+    ./scripts/manage.sh pipeline mathlib:stage2    # Stage 2
+    ./scripts/manage.sh pipeline mathlib:stage3    # Stage 3
+    ./scripts/manage.sh pipeline mathlib:stage4    # Stage 4
+    ./scripts/manage.sh pipeline mathlib:stage5    # Stage 5
+    ./scripts/manage.sh pipeline mathlib:stage6    # Stage 6
+    ```
+
+- • Verify each stage quickly:
+  - • Stage 2 output exists:
+    ```bash
+    find backend/pipelines/jixia_output -name '*.decl.json' | head -5
+    ```
+  - • Stage 3 CSVs:
+    ```bash
+    ls -lh backend/pipelines/csv_output
+    head -3 backend/pipelines/csv_output/mathlib_nodes.csv
+    head -3 backend/pipelines/csv_output/mathlib_rels.csv
+    ```
+  - • Stage 4 embeddings present (dims ~768):
+    ```bash
+    python - <<'PY'
+    import csv,json
+    with open('backend/pipelines/csv_output/mathlib_nodes.csv') as f:
+      r=csv.DictReader(f); v=json.loads(next(r)['embedding']); print('dims=', len(v))
+    PY
+    ```
+  - • Stage 5 GCS URLs reachable:
+    ```bash
+    curl -I https://storage.googleapis.com/<BUCKET_NAME>/mathlib_graph/mathlib_nodes.csv
+    ```
+  - • Neo4j loaded:
+    - In Neo4j Browser:
+      ```cypher
+      MATCH (d:Declaration) RETURN count(d);
+      MATCH ()-[r:DEPENDS_ON]->() RETURN count(r);
+      SHOW INDEXES;
+      ```
+      Look for the `declaration_embedding` vector index after Stage 6.
+
+- • Common pitfalls:
+  - • Lake/jixia not found: run inside the devcontainer or reinstall `jixia`.
+  - • Vertex AI errors: ensure `VERTEX_AI_PROJECT_ID` and location are set; verify ADC with `gcloud auth application-default login`.
+  - • GCS access errors during LOAD CSV: ensure bucket/object is public or switch to signed URLs.
+  - • APOC error on Neo4j: enable APOC plugin (Desktop) or use Aura (includes APOC core). If `apoc.create.addLabels` is restricted, you can comment that part in the loader to proceed without dynamic labels.
+
+- • Optional cleanup:
+  - • Set `PIPELINE_CLEANUP=true` in `backend/.env`, then run:
+    ```bash
+    ./scripts/manage.sh pipeline mathlib:stage6
+    ```
+    to remove local/GCS CSVs after loading.
+
+- • Minimal end-to-end smoke check (one command):
+  ```bash
+  ./scripts/manage.sh pipeline mathlib:all
+  ```
+  Then in Neo4j Browser:
+  ```cypher
+  MATCH (d:Declaration) RETURN count(d) AS nodes;
+  MATCH ()-[r:DEPENDS_ON]->() RETURN count(r) AS rels;
+  SHOW INDEXES;
+  ```
+
+- • CI note:
+  - • A GitHub Actions workflow (`.github/workflows/ci-pipeline.yml`) lints backend and builds the frontend on pushes/PRs to `main`.

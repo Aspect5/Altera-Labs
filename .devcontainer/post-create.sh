@@ -77,6 +77,37 @@ cd "$LEAN_PROJECT_DIR"
 echo "--- Building Lean project (will be fast if dependencies are cached)... ---"
 lake build
 
+echo "--- Installing Rust toolchain and jixia (Lean static analyzer) ---"
+# Ensure required build tools are present
+if command -v apt-get >/dev/null 2>&1; then
+  sudo apt-get update -y || log_warning "apt-get update failed"
+  sudo apt-get install -y build-essential pkg-config libssl-dev curl || log_warning "apt-get install of build tools failed"
+fi
+
+# Install rustup/cargo if not present
+if ! command -v cargo >/dev/null 2>&1; then
+  echo "--- Installing rustup (non-interactive) ---"
+  curl https://sh.rustup.rs -sSf | sh -s -- -y || log_warning "rustup install failed"
+  if [ -f "/home/vscode/.cargo/env" ]; then
+    . /home/vscode/.cargo/env
+  fi
+  # Persist cargo PATH in shells
+  if ! grep -q ". /home/vscode/.cargo/env" /home/vscode/.bashrc 2>/dev/null; then
+    echo -e "\n# Add Cargo to the PATH\n. /home/vscode/.cargo/env\n" >> /home/vscode/.bashrc
+  fi
+  if [ -f "/home/vscode/.zshrc" ] && ! grep -q ". /home/vscode/.cargo/env" /home/vscode/.zshrc 2>/dev/null; then
+    echo -e "\n# Add Cargo to the PATH\n. /home/vscode/.cargo/env\n" >> /home/vscode/.zshrc
+  fi
+fi
+
+# Install jixia if missing
+if ! command -v jixia >/dev/null 2>&1; then
+  echo "--- Installing jixia via cargo ---"
+  cargo install jixia --locked || log_warning "cargo install jixia failed"
+else
+  echo "--- jixia already installed ---"
+fi
+
 echo "--- Setting up frontend dependencies ---"
 cd "$REPO_ROOT/frontend"
 
@@ -278,6 +309,31 @@ else
     echo "   3. Rebuild the dev container"
     echo ""
     echo "   This is REQUIRED for Vertex AI integration to work!"
+fi
+
+# --- Configure Vertex/GenAI env from gcloud (project/location) ---
+echo "--- Configuring Vertex/GenAI environment ---"
+PROJECT_ID=$(gcloud config get-value project 2>/dev/null || echo "")
+LOCATION_DEFAULT="us-east1"
+if [ -n "$PROJECT_ID" ]; then
+  {
+    echo "export GOOGLE_CLOUD_PROJECT=$PROJECT_ID"
+    echo "export GOOGLE_CLOUD_LOCATION=${GOOGLE_CLOUD_LOCATION:-$LOCATION_DEFAULT}"
+    echo "export VERTEX_AI_PROJECT_ID=$PROJECT_ID"
+    echo "export VERTEX_AI_LOCATION=${VERTEX_AI_LOCATION:-$LOCATION_DEFAULT}"
+  } >> /home/vscode/.bashrc
+
+  if [ ! -f "$REPO_ROOT/backend/.env" ]; then
+    {
+      echo "VERTEX_AI_PROJECT_ID=$PROJECT_ID"
+      echo "VERTEX_AI_LOCATION=${VERTEX_AI_LOCATION:-$LOCATION_DEFAULT}"
+      echo "DEFAULT_LLM_MODEL=gemini-2.5-flash"
+      echo "USE_GENAI=true"
+    } > "$REPO_ROOT/backend/.env"
+  fi
+  log_success "Vertex/GenAI env configured (project=$PROJECT_ID, location=${VERTEX_AI_LOCATION:-$LOCATION_DEFAULT})"
+else
+  log_warning "No gcloud project set. Run on host: gcloud auth application-default login && gcloud config set project YOUR_PROJECT_ID"
 fi
 
 echo "--- ✅✅✅ Dev Container setup complete! ✅✅✅ ---"

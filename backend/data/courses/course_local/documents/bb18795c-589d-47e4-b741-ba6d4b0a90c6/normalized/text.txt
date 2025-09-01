@@ -1,0 +1,82 @@
+Honors Analysis I
+Homework 1
+Due by September 10th at 11:59pm EST on Gradescope
+To submit this assignment, you will need a scanned copy of your homework saved as a PDF via
+Gradescope. If you write out your assignment on paper, you can create a PDF file by using a scanning
+app (e.g. the Gradescope app) on your phone or tablet, or using a scanner in the library. Once you
+have your PDF copy of your homework, head to the course Canvas page and select Gradescope from
+the left hand menu. Once in Gradescope select the correct assignment to turn in (e.g. “Homework
+1”) and follow the prompts to upload your PDF. It will ask you to tag the problems on each page
+of your submission so the grader can find your work (don’t skip this step!). After you have tagged
+the PDF you are ready to submit.
+There are 4 questions to answer for a total of 30 points:
+1. [3 points] Suppose x and y are real, and x ≤y + ϵ for every ϵ > 0. Show that x ≤y.
+2. [4 points] (Rudin, Chapter 1, #5): Let A be a nonempty set of real numbers which is bounded
+below. Let −A be the set of all numbers −x, where x ∈A. Prove that
+inf A = −sup(−A).
+3. [8 points] Show that:
+(a) k ≤2k for every natural number k ∈N by induction.
+(b) The dyadic rationals are the rationals of the form
+ j
+2k : j ∈Z, k ∈N
+
+.
+Prove that for any two real numbers x < y, there exists a dyadic rational p such that
+x < p < y.
+4. [15 points] (Rudin, Chapter 1, #6): Fix b > 1.
+(a) If m, n, p, q are integers, n > 0, q > 0, and r = m/n = p/q, prove that
+(bm)1/n = (bp)1/q.
+Hence it makes sense to define br = (bm)1/n.
+(b) Prove that br+s = brbs if r and s are rational.
+(c) If x is real, define B(x) to be the set of all numbers bt, where t is rational and t ≤x. Prove
+that
+br = sup B(r)
+when r is rational. Hence it makes sense to define
+bx = sup B(x)
+for every real x
+1
+(d) Prove that bx+y = bxby for all real x and y following the steps outlined below:
+i. First prove that bxby ≤bx+y directly.
+ii. Show that if b > 1 and n ∈N, then b
+1
+n > 1.
+iii. Show that if x > 0 and x ∈R, then (1 + x)n ≥1 + nx for every n ∈N.
+iv. Show that if b > 1 and n ∈N, then 1 < b
+1
+n < 1 + b−1
+n .
+v. Show that if u, v ∈Q, u > v, and b > 1, then bu > bv.
+vi. Note that, by the law of exponential for integers and #4(b), we have
+1 = b0 = b
+1
+n+(−1
+n) = b
+1
+nb−1
+n.
+vii. Let ϵ > 0 be arbitrary, and let n ∈N be small enough (you need to specify this n).
+viii. By the density of rationals, we can choose r, s ∈Q such that
+x −1
+2n < r < x,
+y −1
+2n < s < y,
+and thus
+x + y −1
+n < r + s < x + y.
+ix. Now let t ∈Q be such that t ≤x + y. By trichotomy, we have three different cases:
+t < r + s,
+t = r + s,
+t > r + s.
+x. If t ≤r + s, show that bt ≤bx+y.
+xi. If r + s < t, then show that
+t −1
+n < r + s < t ≤x + y,
+and using this and the above lemmas, show that
+bt < bxby + ϵ.
+xii. Thus, in any case, we have
+bt < bxby + ϵ.
+xiii. Show that if bx+y > bxby, then we get a contradition, and thus, bx+y ≤bxby.
+Additional problems (for your own practice)
+Do not turn in these, but I am happy to discuss:
+• Rudin, Chapter 1, #1, #7
+2

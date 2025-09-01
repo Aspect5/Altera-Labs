@@ -25,7 +25,17 @@ import fitz
 import prompts
 import metacognition
 import rag_manager
+from services.ingestion.document_ingestor import ingest_document
+from services.quiz.quiz_generator import generate_quiz
+from services.bkg.update_engine import load_or_init_student_state, update_with_item
+from config.quiz_bkg_config import DATA_ROOT
 from socratic_auditor import get_llm_response
+
+# Centralize Vertex/GenAI environment init once per process
+try:
+    import vertex_init  # noqa: F401
+except Exception as _e:
+    logging.warning(f"Vertex/GenAI init module not loaded: {_e}")
 from lean_verifier import lean_verifier_instance
 from config.developer_config import developer_config, developer_logger
 from llm_performance_tester import performance_tester 
@@ -289,6 +299,105 @@ def upload_assignment():
         return jsonify({"message": "File uploaded successfully.", "filePath": file_path}), 200
     return jsonify({"error": "Invalid file."}), 400
 
+# ======================================================================================
+# == Quiz/BKG API Endpoints (MVP per implementation plan)
+# ======================================================================================
+
+@app.route('/api/courses/<course_id>/documents:upload', methods=['POST'])
+def api_course_upload_document(course_id):
+    if 'file' not in request.files:
+        return jsonify({"error": "No file part."}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "No selected file."}), 400
+
+    # Save to backend/user_uploads/<uuid>/<filename> first
+    temp_path, error = rag_manager.save_assignment_file(course_id, file)
+    if error:
+        return jsonify({"error": error}), 500
+    return jsonify({"filePath": temp_path}), 200
+
+
+@app.route('/api/courses/<course_id>/ingest', methods=['POST'])
+def api_course_ingest_document(course_id):
+    data = request.get_json() or {}
+    document_path = data.get('documentPath')
+    force = bool(data.get('force', False))
+    if not document_path:
+        return jsonify({"error": "documentPath is required"}), 400
+    result = ingest_document(course_id, document_path, force=force)
+    return jsonify(result)
+
+
+@app.route('/api/courses/<course_id>/quizzes:generate', methods=['POST'])
+def api_generate_quiz(course_id):
+    data = request.get_json() or {}
+    student_id = data.get('studentId') or (session.get('user_id') if 'user_id' in session else None)
+    if not student_id:
+        return jsonify({"error": "studentId is required"}), 400
+    target_concepts = data.get('targetConcepts')
+    length = int(data.get('length', 5))
+    difficulty = float(data.get('difficulty', 0.5))
+    result = generate_quiz(course_id, student_id, target_concepts, length, difficulty)
+    return jsonify(result)
+
+
+@app.route('/api/courses/<course_id>/quizzes/<quiz_id>', methods=['GET'])
+def api_get_quiz(course_id, quiz_id):
+    quiz_path = Path(DATA_ROOT) / course_id / 'quizzes' / quiz_id / 'quiz.json'
+    if not quiz_path.exists():
+        return jsonify({"error": "Quiz not found"}), 404
+    return jsonify(json.loads(quiz_path.read_text(encoding='utf-8')))
+
+
+@app.route('/api/students/<student_id>/quizzes/<quiz_id>:submit', methods=['POST'])
+def api_submit_quiz(student_id, quiz_id):
+    data = request.get_json() or {}
+    responses = data.get('responses', [])
+
+    # Load quiz
+    # courseId is part of stored quiz
+    # Find course by searching known location
+    for course_dir in (Path(DATA_ROOT)).glob('*'):
+        qpath = course_dir / 'quizzes' / quiz_id / 'quiz.json'
+        if qpath.exists():
+            quiz = json.loads(qpath.read_text(encoding='utf-8'))
+            course_id = quiz.get('course_id')
+            break
+    else:
+        return jsonify({"error": "Quiz not found"}), 404
+
+    state = load_or_init_student_state(course_id, student_id)
+
+    # Map responses by itemId
+    correctness_by_item: dict = {}
+    for r in responses:
+        item_id = r.get('itemId')
+        resp = r.get('response')
+        correctness_by_item[item_id] = bool(r.get('isCorrect')) if 'isCorrect' in r else None
+
+    for item in quiz.get('items', []):
+        item_id = item.get('id')
+        if item_id not in correctness_by_item:
+            continue
+        is_correct = bool(correctness_by_item[item_id])
+        concepts = item.get('concept_coverage', [])
+        # equal weights for now
+        weights = {cid: 1.0 for cid in concepts}
+        state = update_with_item(course_id, student_id, state, weights, is_correct)
+
+    return jsonify({
+        "attemptId": str(uuid.uuid4()),
+        "updatedBkg": state,
+    })
+
+
+@app.route('/api/students/<student_id>/courses/<course_id>/bkg', methods=['GET'])
+def api_get_bkg(student_id, course_id):
+    from services.bkg.update_engine import load_or_init_student_state
+    state = load_or_init_student_state(course_id, student_id)
+    return jsonify(state)
+
 def create_and_get_class(class_name: str, file_stream: Any, file_type: str) -> Dict[str, Any]:
     # Check if class already exists to prevent reprocessing
     for class_id, existing_class in CLASSES.items():
@@ -496,6 +605,23 @@ def get_class_data(class_id):
     except Exception as e:
         app.logger.error(f"Failed to get class data for {class_id}: {e}", exc_info=True)
         return jsonify({"error": "Failed to retrieve class data."}), 500
+
+@app.route('/api/dashboard/class/<class_id>', methods=['DELETE'])
+def delete_class(class_id):
+    """Delete a class from persistent storage by its id."""
+    try:
+        if class_id not in CLASSES:
+            return jsonify({"error": "Class not found."}), 404
+
+        # Remove from in-memory storage
+        deleted = CLASSES.pop(class_id, None)
+        # Persist change
+        save_classes(CLASSES)
+        app.logger.info(f"Deleted class '{deleted.get('className') if deleted else class_id}' ({class_id})")
+        return jsonify({"message": "Class deleted successfully."})
+    except Exception as e:
+        app.logger.error(f"Failed to delete class {class_id}: {e}", exc_info=True)
+        return jsonify({"error": "Failed to delete class."}), 500
 
 @app.route('/api/dashboard/update_session', methods=['POST'])
 def update_session_data():

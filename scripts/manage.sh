@@ -57,6 +57,9 @@ show_usage() {
     echo "    backup     - Create backup"
     echo "    archive    - Archive old files"
     echo ""
+    echo "  pipeline     - Offline data pipelines"
+    echo "    mathlib    - Run Stage 1: prepare mathlib4 source and build"
+    echo ""
     echo "  help         - Show this help message"
     echo ""
     echo "Examples:"
@@ -345,6 +348,42 @@ maintenance_archive() {
     print_success "Archiving completed"
 }
 
+# Pipeline functions
+pipeline_run_mathlib() {
+    print_status "Starting Mathlib Global Graph Pipeline - Stage 1"
+    print_status "This step will clone/update mathlib4 and run 'lake build'"
+    # Ensure Lean/Lake is available (expected in devcontainer)
+    if ! command -v lake >/dev/null 2>&1; then
+        print_error "Lake (Lean build tool) not found in PATH."
+        print_status "Please run this command INSIDE the devcontainer."
+        print_status "In Cursor, open using the dev-container+ URI and use the integrated terminal."
+        exit 127
+    fi
+
+    # Choose Python interpreter robustly
+    PYBIN="$(command -v python || true)"
+    if [ -z "$PYBIN" ]; then
+        PYBIN="$(command -v python3 || true)"
+    fi
+    if [ -z "$PYBIN" ]; then
+        print_error "Python interpreter not found."
+        print_status "Please ensure Python is installed, or use the devcontainer."
+        exit 127
+    fi
+
+    # Prefer running as a module to avoid requiring editable install
+    "$PYBIN" -m backend.pipelines.build_mathlib_graph --stage stage1
+    local exit_code=$?
+    if [ $exit_code -eq 0 ]; then
+        print_success "Pipeline Stage 1 finished successfully."
+        print_status "Detailed logs: backend/logs/pipeline.log"
+    else
+        print_error "Pipeline Stage 1 failed with exit code $exit_code"
+        print_status "See logs: backend/logs/pipeline.log"
+        exit $exit_code
+    fi
+}
+
 # Main command dispatcher
 case "$1" in
     "container")
@@ -380,8 +419,72 @@ case "$1" in
             *) print_error "Unknown maintenance command: $2"; show_usage ;;
         esac
         ;;
+    "pipeline")
+        case "$2" in
+            "mathlib") pipeline_run_mathlib ;;
+            "mathlib:stage2")
+                print_status "Running Mathlib Pipeline - Stage 2 (jixia extraction)"
+                if ! command -v lake >/dev/null 2>&1; then
+                    print_error "Lake not found. Please use the devcontainer."
+                    exit 127
+                fi
+                if ! command -v jixia >/dev/null 2>&1; then
+                    print_error "jixia not found in PATH. Install inside the devcontainer."
+                    echo "Hint: cargo install jixia (or follow jixia docs)"
+                    exit 127
+                fi
+                PYBIN="$(command -v python || command -v python3)"
+                [ -z "$PYBIN" ] && { print_error "Python not found"; exit 127; }
+                "$PYBIN" -m backend.pipelines.build_mathlib_graph --stage stage2
+                ;;
+            "mathlib:stage3")
+                print_status "Running Mathlib Pipeline - Stage 3 (transform to CSVs)"
+                PYBIN="$(command -v python || command -v python3)"
+                [ -z "$PYBIN" ] && { print_error "Python not found"; exit 127; }
+                "$PYBIN" -m backend.pipelines.build_mathlib_graph --stage stage3
+                ;;
+            "mathlib:stage4")
+                print_status "Running Mathlib Pipeline - Stage 4 (Vertex AI embeddings)"
+                PYBIN="$(command -v python || command -v python3)"
+                [ -z "$PYBIN" ] && { print_error "Python not found"; exit 127; }
+                "$PYBIN" -m backend.pipelines.build_mathlib_graph --stage all >/dev/null 2>&1 || true
+                "$PYBIN" -m backend.pipelines.build_mathlib_graph --stage stage4
+                ;;
+            "mathlib:stage5")
+                print_status "Running Mathlib Pipeline - Stage 5 (GCS upload + Neo4j LOAD CSV)"
+                PYBIN="$(command -v python || command -v python3)"
+                [ -z "$PYBIN" ] && { print_error "Python not found"; exit 127; }
+                "$PYBIN" -m backend.pipelines.build_mathlib_graph --stage stage5
+                ;;
+            "mathlib:stage6")
+                print_status "Running Mathlib Pipeline - Stage 6 (vector index + cleanup)"
+                PYBIN="$(command -v python || command -v python3)"
+                [ -z "$PYBIN" ] && { print_error "Python not found"; exit 127; }
+                "$PYBIN" -m backend.pipelines.build_mathlib_graph --stage stage6
+                ;;
+            "mathlib:all")
+                print_status "Running Mathlib Pipeline - Stages 1–6"
+                if ! command -v lake >/dev/null 2>&1; then
+                    print_error "Lake not found. Please use the devcontainer."
+                    exit 127
+                fi
+                if ! command -v jixia >/dev/null 2>&1; then
+                    print_error "jixia not found in PATH. Install inside the devcontainer."
+                    echo "Hint: cargo install jixia (or follow jixia docs)"
+                    exit 127
+                fi
+                PYBIN="$(command -v python || command -v python3)"
+                [ -z "$PYBIN" ] && { print_error "Python not found"; exit 127; }
+                "$PYBIN" -m backend.pipelines.build_mathlib_graph --stage all
+                ;;
+            *) print_error "Unknown pipeline command: $2"; show_usage ;;
+        esac
+        ;;
     "help"|"-h"|"--help")
         show_usage
+        ;;
+    "run-pipeline:mathlib")
+        pipeline_run_mathlib
         ;;
     *)
         print_error "Unknown command: $1"

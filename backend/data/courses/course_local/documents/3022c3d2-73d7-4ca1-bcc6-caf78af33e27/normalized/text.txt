@@ -1,0 +1,1 @@
+This document explains limits, derivatives, and continuity. The derivative of f is defined as the limit as h->0 of (f(x+h)-f(x))/h. Also discusses sequences and convergence.

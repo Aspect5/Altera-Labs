@@ -4,9 +4,10 @@ import { ClassSummary } from '../../types/components';
 interface ClassHealthCardProps {
   classData: ClassSummary;
   onClick: () => void;
+  onDelete?: (id: string) => void;
 }
 
-const ClassHealthCard: React.FC<ClassHealthCardProps> = ({ classData, onClick }) => {
+const ClassHealthCard: React.FC<ClassHealthCardProps> = ({ classData, onClick, onDelete }) => {
   const getHealthColor = (score: number) => {
     if (score >= 80) return 'text-green-400';
     if (score >= 60) return 'text-yellow-400';
@@ -49,16 +50,17 @@ const ClassHealthCard: React.FC<ClassHealthCardProps> = ({ classData, onClick })
 
   return (
     <div 
-      onClick={onClick}
-      className="bg-slate-800 rounded-lg p-6 cursor-pointer hover:bg-slate-700 transition-all duration-200 border border-slate-700 hover:border-slate-600 group"
+      className="bg-slate-800 rounded-lg p-6 transition-all duration-200 border border-slate-700 hover:border-slate-600 group"
     >
       {/* Header with plant icon and health score */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <span className="text-2xl">{getPlantIcon(classData.plantState)}</span>
-          <h3 className="text-lg font-semibold text-slate-200 group-hover:text-white transition-colors">
-            {classData.name}
-          </h3>
+          <button onClick={onClick} className="text-left">
+            <h3 className="text-lg font-semibold text-slate-200 group-hover:text-white transition-colors">
+              {classData.name}
+            </h3>
+          </button>
         </div>
         <div className={`text-lg font-bold ${getHealthColor(classData.healthScore)}`}>
           {classData.healthScore}%
@@ -89,9 +91,19 @@ const ClassHealthCard: React.FC<ClassHealthCardProps> = ({ classData, onClick })
         </div>
       </div>
 
-      {/* Hover effect indicator */}
-      <div className="mt-4 text-xs text-slate-500 group-hover:text-slate-400 transition-colors">
-        Click to continue learning →
+      {/* Footer actions */}
+      <div className="mt-4 flex items-center justify-between text-xs text-slate-500 group-hover:text-slate-400 transition-colors">
+        <span>Click to continue learning →</span>
+        {onDelete && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(classData.id); }}
+            className="px-2 py-1 rounded bg-red-600 hover:bg-red-500 text-white text-xs"
+            aria-label={`Delete ${classData.name}`}
+            title="Delete class"
+          >
+            Delete
+          </button>
+        )}
       </div>
     </div>
   );

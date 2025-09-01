@@ -9,3 +9,6 @@ description = "Local development package for Altera Labs Backend"
 
 [tool.setuptools.packages.find]
 include = ["backend*"]
+
+[project.scripts]
+build-mathlib-graph = "backend.pipelines.build_mathlib_graph:main"

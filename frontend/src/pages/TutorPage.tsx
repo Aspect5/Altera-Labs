@@ -8,6 +8,8 @@ import { ChatMentor, ProgressFlowers, MoodIndicator, AchievementSystem } from '.
 import { SidebarVine } from '../../components/learning/ProgressFlowers';
 import { SolutionPopup } from '../../components/common/SolutionPopup';
 import { uploadHomework } from '../../services';
+import { uploadDocument, ingestDocument, generateQuiz, getQuiz } from '../../services/quizService';
+import { Quiz } from '../../types/quiz';
 
 // Error Boundary Component
 class TutorPageErrorBoundary extends React.Component<
@@ -142,6 +144,67 @@ const TutorPage: React.FC<TutorPageProps> = ({
   const [showSolutionPopup, setShowSolutionPopup] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string>('');
   const [autoSolveAttempts, setAutoSolveAttempts] = useState<number>(0);
+  // Quiz generation state
+  const [isGeneratingQuiz, setIsGeneratingQuiz] = useState(false);
+  const [quizError, setQuizError] = useState<string | null>(null);
+  const [generatedQuiz, setGeneratedQuiz] = useState<Quiz | null>(null);
+  const [showQuizModal, setShowQuizModal] = useState(false);
+  const [quizProgress, setQuizProgress] = useState<string[]>([]);
+  const [showQuizProgress, setShowQuizProgress] = useState(false);
+
+  // Helper to resolve a pseudo courseId and studentId for MVP
+  const getCourseAndStudent = () => {
+    // Use persistent sessionId as studentId if available
+    const saved = localStorage.getItem('sessionState');
+    let studentId = 'student_local';
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.sessionId) studentId = parsed.sessionId;
+      } catch {}
+    }
+    // Use className-based or fallback course id
+    const courseId = 'course_local';
+    return { courseId, studentId };
+  };
+
+  const handleGenerateQuestions = async () => {
+    if (!uploadedFile) {
+      setQuizError('Please upload homework first.');
+      return;
+    }
+    setIsGeneratingQuiz(true);
+    setQuizError(null);
+    setGeneratedQuiz(null);
+    setQuizProgress([]);
+    setShowQuizProgress(true);
+    try {
+      const { courseId, studentId } = getCourseAndStudent();
+      // 1) Upload
+      setQuizProgress(prev => [...prev, 'Uploading document...']);
+      const { filePath } = await uploadDocument(courseId, uploadedFile);
+      // 2) Ingest
+      setQuizProgress(prev => [...prev, 'Ingesting and chunking...']);
+      const ingestRes = await ingestDocument(courseId, filePath);
+      if (!('documentId' in ingestRes)) {
+        // If skipped, we still proceed; otherwise require documentId
+        if (!ingestRes.skipped) throw new Error('Ingestion failed');
+      }
+      // 3) Generate quiz
+      setQuizProgress(prev => [...prev, 'Generating questions...']);
+      const { quizId } = await generateQuiz(courseId, studentId, { length: 5 });
+      // 4) Fetch quiz
+      setQuizProgress(prev => [...prev, 'Loading questions...']);
+      const quiz = await getQuiz(courseId, quizId);
+      setGeneratedQuiz(quiz);
+      setShowQuizModal(true);
+    } catch (e: any) {
+      setQuizError(e.message || 'Failed to generate questions');
+    } finally {
+      setIsGeneratingQuiz(false);
+      setShowQuizProgress(false);
+    }
+  };
 
   const handleFileUpload = async (file: File) => {
     setIsUploading(true);
@@ -418,6 +481,13 @@ const TutorPage: React.FC<TutorPageProps> = ({
                   disabled={isUploading}
                 />
               </div>
+              <button
+                onClick={handleGenerateQuestions}
+                disabled={!uploadedFile || isUploading || isGeneratingQuiz}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${(!uploadedFile || isUploading || isGeneratingQuiz) ? 'bg-slate-700 text-slate-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-500 text-white'}`}
+              >
+                {isGeneratingQuiz ? 'Generating…' : 'Generate Questions'}
+              </button>
               {isUploading && (
                 <div className="flex items-center gap-2 text-blue-400">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400"></div>
@@ -433,6 +503,11 @@ const TutorPage: React.FC<TutorPageProps> = ({
             {uploadError && (
               <div className="mt-2 text-red-400 text-sm">
                 Error: {uploadError}
+              </div>
+            )}
+            {quizError && (
+              <div className="mt-2 text-red-400 text-sm">
+                {quizError}
               </div>
             )}
           </div>
@@ -526,6 +601,69 @@ const TutorPage: React.FC<TutorPageProps> = ({
           }}
           solution={homeworkResult?.solutions?.[0]?.solution || null}
         />
+
+        {/* Quiz Generation Progress Overlay */}
+        {showQuizProgress && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="bg-slate-900 border border-slate-700 rounded-lg p-5 w-full max-w-md shadow-xl">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-cyan-400"></div>
+                <div className="text-cyan-300 font-semibold">Preparing your quiz…</div>
+              </div>
+              <ul className="space-y-1 text-sm text-slate-300">
+                {quizProgress.map((step, idx) => (
+                  <li key={idx} className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-cyan-500"></span>
+                    <span>{step}</span>
+                  </li>
+                ))}
+                {quizProgress.length === 0 && (
+                  <li className="text-slate-400">Starting…</li>
+                )}
+              </ul>
+            </div>
+          </div>
+        )}
+
+        {/* Quiz Modal */}
+        {showQuizModal && generatedQuiz && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+            <div className="bg-slate-900 border border-slate-700 rounded-lg max-w-2xl w-full mx-4 p-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-lg font-semibold text-cyan-400">Generated Questions</h3>
+                <button onClick={() => setShowQuizModal(false)} className="text-slate-400 hover:text-slate-200">✕</button>
+              </div>
+              <div className="max-h-[60vh] overflow-y-auto space-y-4">
+                {generatedQuiz.items && generatedQuiz.items.length > 0 ? (
+                  generatedQuiz.items.map((item, idx) => (
+                    <div key={item.id} className="bg-slate-800 rounded p-3 border border-slate-700">
+                      <div className="text-sm text-slate-400 mb-1">Question {idx + 1}</div>
+                      <div className="text-slate-200 mb-2">{item.payload?.stem || 'Question'}</div>
+                      {Array.isArray(item.payload?.options) && (
+                        <ul className="list-disc ml-6 text-slate-300">
+                          {item.payload.options.map((opt: string, i: number) => (
+                            <li key={i}>{opt}</li>
+                          ))}
+                        </ul>
+                      )}
+                      {item.concept_coverage?.length > 0 && (
+                        <div className="mt-2 text-xs text-slate-400">Concepts: {item.concept_coverage.join(', ')}</div>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="bg-slate-800 rounded p-4 border border-slate-700 text-slate-300">
+                    No questions were generated from this document yet. Try regenerating, or upload a document with more text.
+                  </div>
+                )}
+              </div>
+              <div className="mt-3 text-right">
+                <button onClick={() => setShowQuizModal(false)} className="px-4 py-2 rounded bg-slate-700 hover:bg-slate-600 mr-2">Close</button>
+                <button onClick={handleGenerateQuestions} className="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-white" disabled={isGeneratingQuiz}>Regenerate</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </TutorPageErrorBoundary>
   );

@@ -9,3 +9,6 @@ export * from './bayesianService';
 
 // Gamification Services
 export * from './gamificationService'; 
+
+// Quiz Services
+export * from './quizService';

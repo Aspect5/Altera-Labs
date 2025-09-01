@@ -1,4 +1,9 @@
-# Migration Summary: Google AI Client SDK to Vertex AI
+# Migration Summary
+
+- ✅ REMOVED: Vertex AI SDK usage for generative and embeddings
+- ✅ USING: google-genai for LLM and embeddings (Vertex-routed via project/location)
+- ✅ INIT: Centralized env via devcontainer post-create and backend/vertex_init.py
+- ✅ FALLBACKS: Deterministic embeddings if cloud unavailable
 
 ## Overview
 Successfully migrated Altera Labs from the deprecated Google AI client SDK to Google Vertex AI, following the deprecation notice from Google Cloud.
