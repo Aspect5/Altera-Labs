@@ -1,6 +1,117 @@
-# 🚀 Altera Labs - AI-Powered Math Education Platform
+# **🚀 Altera Labs \- AI-Powered Math Education Platform**
 
 An intelligent tutoring system combining Lean 4 theorem proving with AI to provide personalized math education.
+
+## **🧠 The Core Workflow: From Homework to Insight**
+
+The central value of Altera Labs lies not just in providing answers, but in creating a complete, adaptive learning cycle. The system uses a verified, correct solution to power effective Socratic tutoring, and then uses personalized quizzes to assess understanding and dynamically update each student's unique knowledge graph.  
+```mermaid
+graph TD
+    subgraph 1 Ingestion
+        A(User Uploads Assignment<br>PDF or Image) --> B(Content Extraction);
+        B --> C(Structured Problem<br>Definition);
+    end
+
+    subgraph 2 AI Reasoning and Verification
+        C -- Proof Goal --> D(Orchestrator<br>Gemini 2.5 Pro);
+        D -- Solve formal proof --> E(Specialized Prover Agent<br>e.g. DeepSeek-Prover);
+        E -- Tool Call --> F(Knowledge Base<br>Future GraphRAG);
+        F -- Relevant Theorems --> E;
+        E -- Generated Lean 4 Proof --> G(Lean 4 Verifier);
+        G -- Verified Success or Error --> D;
+    end
+
+    subgraph 3 Socratic Tutoring
+        D -- Verified Solution Path --> H(Flask Backend);
+        H -- Stores Solution --> I(Persistent Storage<br>Future Neo4j);
+        J(User Interacts with<br>React Frontend) -- "I'm stuck" --> H;
+        H -- Compares state to solution --> K(Gemini Generates<br>Socratic Hint);
+        K -- "Have you considered Theorem X?" --> J;
+    end
+
+    subgraph 4 Adaptive Feedback Loop
+        H -- Generate Quiz --> L(Personalized Quiz Generation<br>Based on Knowledge Graph);
+        L --> M(User Takes Quiz<br>via Frontend);
+        M -- Quiz Results --> H;
+        H -- Updates Student Model --> N(Bayesian Knowledge Tracer<br>Updates Personal Graph);
+        N --> D
+    end
+
+
+    style D fill:#f9e79f,stroke:#f39c12
+    style E fill:#d2b4de,stroke:#8e44ad
+    style G fill:#d5f5e3,stroke:#27ae60
+    style J fill:#eaf2f8,stroke:#3498db
+    style L fill:#fdebd0,stroke:#e67e22
+    style N fill:#e8daef,stroke:#9b59b6
+```
+### **Step 1: Ingestion and Problem Definition**
+
+When a user uploads a homework assignment, the system first needs to understand the problem.
+
+* **Current**: The backend uses PyMuPDF to extract raw text and LaTeX from the document, which is then parsed to define the proof goal.  
+* **Future**: This stage will incorporate advanced OCR to handle handwritten problems and create a more robust, structured JSON representation of the task.
+
+### **Step 2: AI-Powered Solution Generation & Verification**
+
+This is where our unique hybrid AI architecture solves the problem *for itself* to establish a ground truth.
+
+1. **Orchestration**: The structured problem is sent to our main **Orchestrator (Gemini 2.5 Pro)**. Its job is not to solve the proof directly, but to manage the process.  
+2. **Delegation to Specialist**: The Orchestrator calls a **Specialized Prover Agent** (e.g., DeepSeek-Prover) as a tool. This agent is fine-tuned for formal theorem proving and is tasked with generating the step-by-step reasoning and corresponding Lean 4 code.  
+3. **Formal Verification**: The generated Lean 4 code is immediately sent to the **Lean 4 Verifier**. This is our critical "grounding" step that guarantees correctness.
+
+### **Step 3: Powering the Socratic Dialogue**
+
+With a verified solution graph in hand, the AI Cognitive Partner is now ready to tutor.
+
+* The AI **does not** simply show the user the solution.  
+* Instead, the Orchestrator (Gemini) uses its natural language capabilities and the verified solution map to act as a Socratic tutor, providing minimal, strategic hints to guide the student.
+
+### **Step 4: Adaptive Feedback & Quizzing**
+
+This is the feedback loop that makes the learning experience truly dynamic and personalized.
+
+1. **Quiz Generation**: Based on the topics the student has been working on and the current state of their Personal Knowledge Graph, the system can generate a personalized quiz to test for concept mastery.  
+2. **Knowledge Tracing**: The student's performance on the quiz is analyzed. These results are fed into our **Bayesian Knowledge Tracing** model.  
+3. **Graph Update**: The model updates the student's Personal Knowledge Graph, refining the system's understanding of their strengths and weaknesses. This new, more accurate graph then informs all future tutoring hints and quiz questions, creating a continuous cycle of learning, assessment, and adaptation.
+
+## **🗺️ Project Roadmap**
+
+Our development is structured in phases, moving from the current validated MVP to a scalable, enterprise-ready platform.
+
+### **Phase 1: Foundation & MVP (Q3-Q4 2025\) \- ✅ Complete**
+
+* **Status**: We have successfully built and validated the core "Verification-before-Tutoring" workflow.  
+* **Key Achievements**:  
+  * Functional Flask backend with a React frontend.  
+  * Integration of Gemini 2.5 Pro for orchestration and Socratic dialogue.  
+  * Successful implementation of the Lean 4 verifier as a subprocess for grounding AI-generated proofs.  
+  * Robust Dev Container environment for rapid onboarding.
+
+### **Phase 2: Knowledge Graph & Scalability (Q1-Q2 2026 \- The JHU Fuel Semester)**
+
+* **Status**: This is our primary focus for the accelerator program.  
+* **Key Objectives**:  
+  1. **Implement Neo4j**: Migrate to a scalable graph database to store a "Global Mathlib Graph" and individual "Personal Knowledge Graphs" (PKGs).  
+  2. **Develop GraphRAG Pipeline**: Build the offline pipeline to process mathematical libraries and generate embeddings.  
+  3. **Implement Adaptive Quizzing**: Develop the module to generate personalized quizzes based on the student's knowledge graph. Integrate quiz results as a primary input into the Bayesian Knowledge Tracing model to dynamically update the PKG.  
+  4. **Integrate Specialized Provers**: Formalize the integration of specialized prover agents as high-power tools.  
+  5. **Initial JHU Pilot**: Begin limited pilot testing with a small cohort of JHU students.
+
+### **Phase 3: Enhanced User Experience & Pilot Expansion (Q3-Q4 2026\)**
+
+* **Status**: Post-accelerator scaling.  
+* **Key Objectives**:  
+  1. **Advanced Ingestion**: Implement robust syllabus and document parsing (leveraging OCR).  
+  2. **Student Modeler**: Evolve the Bayesian model to track concept mastery and personalize long-term learning paths.  
+  3. **Expand JHU Pilot Program**: Roll out the platform to select introductory proof-based courses.
+
+### **Phase 4: Commercialization & Feature Expansion (2027 and beyond)**
+
+* **Status**: Long-term vision.  
+* **Key Objectives**:  
+  * **Multi-Subject Support**: Expand the knowledge graph to support other formal domains like Physics, Logic, and advanced Computer Science.  
+  * **Enterprise Licensing**: Develop a B2B model for university departments.
 
 ## 📋 Prerequisites (Install on Host Machine)
 
